@@ -1,4 +1,4 @@
-.. image:: https://imgur.com/UOxtOPv
+.. image:: https://imgur.com/UOxtOPv.png
     :alt: BStats
 
 BStats
