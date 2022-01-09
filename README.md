@@ -116,7 +116,7 @@ loop.run_until_complete(main())
 
 # Miscellaneous
 
-- If you are currently using this wrapper, please star this repository 😊
-- If you come across an issue in the wrapper, please [create an issue](https://github.com/Bimi05/bstats/issues).
+- Please star this repository if you're satisfied with the wrapper 😊
+- Have you come across an issue in the wrapper? No worries! Just [create an issue](https://github.com/Bimi05/bstats/issues)!
 - If you need an API key, visit the [Brawl Stars API](https://developer.brawlstars.com/#/) page.
    - You must create an account in order to create and use an API key.
