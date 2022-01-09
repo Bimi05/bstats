@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 from typing import List
 from .member import ClubMember
-from ..utils import camel_to_snake, format_tag
+from ..utils import camel_to_snake
 
 class Club:
     """
@@ -45,6 +45,8 @@ class Club:
         The club's required trophies for a new member to join.
     members: List[``ClubMember``]
         A list consisting of ``ClubMember`` objects, representing each of the club's members.
+    president: ``ClubMember``
+        A ``ClubMember`` object representing the club's president.
     """
     def __init__(self, data):
         self.data = {}
@@ -87,4 +89,11 @@ class Club:
     def members(self) -> List[ClubMember]:
         """List[``ClubMember``]: A list consisting of ``ClubMember`` objects, representing each of the club's members."""
         return [ClubMember(member) for member in self.data["members"]]
+
+    @property
+    def president(self):
+        """``ClubMember``: A ``ClubMember`` object representing the club's president."""
+        for cm in self.members:
+            if cm.role == "President":
+                return ClubMember(cm)
 
