@@ -74,7 +74,7 @@ client = bstats.AsyncClient("token") # Never post any of your tokens for APIs on
 
 # to use the async client, we'll need an async function
 async def main():
-    player = client.get_player("80V2R98CQ")
+    player = await client.get_player("80V2R98CQ")
     print(player.trophies)
     print(player.solo_victories)
 
@@ -87,12 +87,12 @@ async def main():
           print(player.name, player.trophies) # Show their name and their trophies
 
     # Get the top 5 players in the world
-    best_players = client.get_leaderboards(mode="players", limit=5)
+    best_players = await client.get_leaderboards(mode="players", limit=5)
     for player in best_players:
        print(player.name, player.rank) # Show their name and their rank on the leaderboard
 
     # Get the top 5 Meg players in the United Kingdom
-    top_meg_players = client.get_leaderboards(
+    top_meg_players = await client.get_leaderboards(
        mode="brawlers",
        country="GB",
        limit=5,
@@ -102,10 +102,10 @@ async def main():
        print(player.name, player.rank)
 
     # Get a player's 25 most recent battles
-    battles = client.get_battlelogs("80V2R98CQ")
+    battles = await client.get_battlelogs("80V2R98CQ")
     print(battles[0].mode_name) # Show the last mode the player battled in
 
-    rotation = client.get_event_rotation()
+    rotation = await client.get_event_rotation()
     for event in rotation:
        print(event.start, event.end)
 
