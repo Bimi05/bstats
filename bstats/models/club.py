@@ -91,7 +91,7 @@ class Club:
         return [ClubMember(member) for member in self.data["members"]]
 
     @property
-    def president(self):
+    def president(self) -> ClubMember:
         """``ClubMember``: A ``ClubMember`` object representing the club's president."""
         for cm in self.members:
             if cm.role == "President":
