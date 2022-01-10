@@ -45,6 +45,10 @@ class Club:
         The club's required trophies for a new member to join.
     members: List[``ClubMember``]
         A list consisting of ``ClubMember`` objects, representing each of the club's members.
+    type: ``str``
+        The club's type (i.e. Open/Invite Only/Closed).
+    badge_id: ``int``
+        The club's badge ID.
     president: ``ClubMember``
         A ``ClubMember`` object representing the club's president.
     """
@@ -91,7 +95,17 @@ class Club:
         return [ClubMember(member) for member in self.data["members"]]
 
     @property
-    def president(self) -> ClubMember:
+    def type(self) -> str:
+        """``str``: The club's type (i.e. Open/Invite Only/Closed)."""
+        return self.data["type"].capitalize() if self.data["type"].lower() != "inviteonly" else "Invite Only"
+
+    @property
+    def badge_id(self) -> int:
+        """``int``: The club's badge ID."""
+        return self.data["badge_id"]
+
+    @property
+    def president(self):
         """``ClubMember``: A ``ClubMember`` object representing the club's president."""
         for cm in self.members:
             if cm.role == "President":
