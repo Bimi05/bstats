@@ -27,7 +27,7 @@ import aiohttp
 import sys
 
 from cachetools import TTLCache
-from typing import List, Dict, Union, NoReturn, Literal, overload
+from typing import List, Dict, Union, NoReturn, overload
 
 from ..utils import format_tag
 from ..http import APIRoute, AsyncHTTPClient
@@ -114,7 +114,7 @@ class AsyncClient:
     async def __aexit__(self, exc_type, exc, tb) -> None:
         await self.session.close()
 
-    async def get_player(self, tag: str, *, use_cache: Literal[True, False] = True) -> Profile:
+    async def get_player(self, tag: str, *, use_cache: bool = True) -> Profile:
         """
         Get a player's profile and their stats
 
@@ -139,7 +139,7 @@ class AsyncClient:
         data = await self.http_client.request(APIRoute(f"/players/{format_tag(tag)}").url, use_cache=use_cache)
         return Profile(self, data)
 
-    async def get_club(self, tag: str, *, use_cache: Literal[True, False] = True) -> Club:
+    async def get_club(self, tag: str, *, use_cache: bool = True) -> Club:
         """
         Get a club's stats
         
@@ -164,7 +164,7 @@ class AsyncClient:
         data = await self.http_client.request(APIRoute(f"/clubs/{format_tag(tag)}").url, use_cache=use_cache)
         return Club(self, data)
 
-    async def get_brawlers(self, *, use_cache: Literal[True, False] = True) -> List[Brawler]:
+    async def get_brawlers(self, *, use_cache: bool = True) -> List[Brawler]:
         """
         Get all the available brawlers and information about them.
         - These are NOT the brawlers a player has!
@@ -186,7 +186,7 @@ class AsyncClient:
         data = await self.http_client.request(APIRoute("/brawlers").url, use_cache=use_cache)
         return [Brawler(brawler) for brawler in data["items"]]
 
-    async def get_members(self, tag: str, *, use_cache: Literal[True, False] = True) -> List[ClubMember]:
+    async def get_members(self, tag: str, *, use_cache: bool = True) -> List[ClubMember]:
         """
         Get a club's members
         - Note: Each member does not have the attributes of the ``Player`` object,
@@ -213,7 +213,7 @@ class AsyncClient:
         data = await self.http_client.request(APIRoute(f"/clubs/{format_tag(tag)}/members").url, use_cache=use_cache)
         return [ClubMember(member) for member in data["items"]]
 
-    async def get_battlelogs(self, tag: str, *, use_cache: Literal[True, False] = True) -> List[BattlelogEntry]:
+    async def get_battlelogs(self, tag: str, *, use_cache: bool = True) -> List[BattlelogEntry]:
         """
         Get a player's battlelogs
 
@@ -246,7 +246,7 @@ class AsyncClient:
         country: str, 
         limit: int, 
         brawler: Union[int, str], 
-        use_cache: Literal[True, False]
+        use_cache: bool
     ) -> List[LeaderboardPlayerEntry]:
         ...
 
@@ -258,7 +258,7 @@ class AsyncClient:
         country: str, 
         limit: int, 
         brawler: Union[int, str], 
-        use_cache: Literal[True, False]
+        use_cache: bool
     ) -> List[LeaderboardClubEntry]:
         ...
 
@@ -270,19 +270,19 @@ class AsyncClient:
         country: str, 
         limit: int, 
         brawler: Union[int, str], 
-        use_cache: Literal[True, False]
+        use_cache: bool
     ) -> List[LeaderboardPlayerEntry]:
         ...
 
 
     async def get_leaderboards(
         self, 
-        mode: Literal["players", "clubs", "brawlers"], 
+        mode=None, 
         *, 
-        country: str = "global", 
-        limit: int = 200, 
-        brawler: Union[int, str] = None, 
-        use_cache: Literal[True, False] = True
+        country=None, 
+        limit=None, 
+        brawler=None, 
+        use_cache=None
     ) -> Union[List[LeaderboardPlayerEntry], List[LeaderboardClubEntry]]:
         """
         Get in-game leaderboard rankings for players, clubs or brawlers.
@@ -310,8 +310,8 @@ class AsyncClient:
         Returns
         -------
 
-        List[``bstats.LeaderboardEntry``]
-            A list consisting of ``LeaderboardEntry`` objects, representing the leaderboard for the selected mode.
+        Union[List[``LeaderboardPlayerEntry``], List[``LeaderboardClubEntry``]]
+            A list consisting of either ``LeaderboardPlayerEntry`` or ``LeaderboardClubEntry`` objects, representing the leaderboard rankings for the selected mode.
 
         Raises
         ------
