@@ -26,7 +26,7 @@ import requests
 import sys
 
 from cachetools import TTLCache
-from typing import Dict, List, Literal, Union, overload
+from typing import Dict, List, Union, overload
 
 
 from ..utils import format_tag
@@ -91,7 +91,7 @@ class SyncClient:
     def __exit__(self, exc_type, exc, tb) -> None:
         self.session.close()
 
-    def get_player(self, tag: str, *, use_cache: Literal[True, False] = True) -> Profile:
+    def get_player(self, tag: str, *, use_cache: bool = True) -> Profile:
         """
         Get a player's profile and their stats
 
@@ -116,7 +116,7 @@ class SyncClient:
         data = self.http_client.request(APIRoute(f"/players/{format_tag(tag)}").url, use_cache=use_cache)
         return Profile(self, data)
 
-    def get_club(self, tag: str, *, use_cache: Literal[True, False] = True) -> Club:
+    def get_club(self, tag: str, *, use_cache: bool = True) -> Club:
         """
         Get a club's stats
         
@@ -141,7 +141,7 @@ class SyncClient:
         data = self.http_client.request(APIRoute(f"/clubs/{format_tag(tag)}").url, use_cache=use_cache)
         return Club(self, data)
 
-    def get_brawlers(self, *, use_cache: Literal[True, False] = True) -> List[Brawler]:
+    def get_brawlers(self, *, use_cache: bool = True) -> List[Brawler]:
         """
         Get all the available brawlers and information about them.
         - These are NOT the brawlers a player has!
@@ -163,7 +163,7 @@ class SyncClient:
         data = self.http_client.request(APIRoute("/brawlers").url, use_cache=use_cache)
         return [Brawler(brawler) for brawler in data["items"]]
 
-    def get_members(self, tag: str, *, use_cache: Literal[True, False] = True) -> List[ClubMember]:
+    def get_members(self, tag: str, *, use_cache: bool = True) -> List[ClubMember]:
         """
         Get a club's members
         - Note: Each member does not have the attributes of the ``Player`` object,
@@ -190,7 +190,7 @@ class SyncClient:
         data = self.http_client.request(APIRoute(f"/clubs/{format_tag(tag)}/members").url, use_cache=use_cache)
         return [ClubMember(member) for member in data["items"]]
 
-    def get_battlelogs(self, tag: str, *, use_cache: Literal[True, False] = True) -> List[BattlelogEntry]:
+    def get_battlelogs(self, tag: str, *, use_cache: bool = True) -> List[BattlelogEntry]:
         """
         Get a player's battlelogs
 
@@ -223,7 +223,7 @@ class SyncClient:
         country: str, 
         limit: int, 
         brawler: Union[int, str], 
-        use_cache: Literal[True, False]
+        use_cache: bool
     ) -> List[LeaderboardPlayerEntry]:
         ...
 
@@ -235,7 +235,7 @@ class SyncClient:
         country: str, 
         limit: int, 
         brawler: Union[int, str], 
-        use_cache: Literal[True, False]
+        use_cache: bool
     ) -> List[LeaderboardClubEntry]:
         ...
 
@@ -247,19 +247,19 @@ class SyncClient:
         country: str, 
         limit: int, 
         brawler: Union[int, str], 
-        use_cache: Literal[True, False]
+        use_cache: bool
     ) -> List[LeaderboardPlayerEntry]:
         ...
 
 
     def get_leaderboards(
         self, 
-        mode: Literal["players", "clubs", "brawlers"], 
+        mode=None, 
         *, 
-        country: str = "global", 
-        limit: int = 200, 
-        brawler: Union[int, str] = None, 
-        use_cache: Literal[True, False] = True
+        country=None, 
+        limit=None, 
+        brawler=None, 
+        use_cache=None
     ) -> Union[List[LeaderboardPlayerEntry], List[LeaderboardClubEntry]]:
         """
         Get in-game leaderboard rankings for players, clubs or brawlers.
@@ -338,7 +338,7 @@ class SyncClient:
             if mode == name:
                 return [entry_type(entry) for entry in data["items"]]
 
-    def get_event_rotation(self, use_cache: Literal[True, False] = True) -> List[Rotation]:
+    def get_event_rotation(self, use_cache: bool = True) -> List[Rotation]:
         """
         Get the current in-game ongoing event rotation.
 
