@@ -1,6 +1,17 @@
 # BStats changelog
 All notable contributions and changes to the project will be documented here.
 
+### 1.0.6 - 10th Jan 2022
+#### Updated
+- Replaced `self.client.session` with `requests.Session()` in the `club` attribute of the `Profile` object to eliminate possible errors
+
+### 1.0.5 - 10th Jan 2022
+#### Updated
+- `club` attribute for the `Profile` object used 2 arguments when in fact it accepts only 1.
+
+### 1.0.4 - 10th Jan 2022
+
+
 ### 1.0.3 - 10th Jan 2022
 #### Added
 - Import all errors in the \_\_init__ file
