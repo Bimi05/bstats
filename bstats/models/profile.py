@@ -22,6 +22,8 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
+import requests
+
 from .club import Club
 from .brawler import Brawler
 
@@ -138,7 +140,7 @@ class Profile:
     @property
     def club(self) -> Club:
         """``Club``: A ``Club`` object representing the player's club."""
-        return Club(HTTPClient(self.client.timeout, self.client.session, self.client.headers, self.client.cache).request(APIRoute(f"/clubs/{format_tag(self.data['club']['tag'])}").url, use_cache=True))
+        return Club(HTTPClient(self.client.timeout, requests.Session(), self.client.headers, self.client.cache).request(APIRoute(f"/clubs/{format_tag(self.data['club']['tag'])}").url, use_cache=True))
 
     @property
     def brawlers(self) -> List[Brawler]:
