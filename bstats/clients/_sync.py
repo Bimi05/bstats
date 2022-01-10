@@ -287,8 +287,8 @@ class SyncClient:
         Returns
         -------
 
-        List[``bstats.LeaderboardEntry``]
-            A list consisting of ``LeaderboardEntry`` objects, representing the leaderboard for the selected mode.
+        Union[List[``LeaderboardPlayerEntry``], List[``LeaderboardClubEntry``]]
+            A list consisting of either ``LeaderboardPlayerEntry`` or ``LeaderboardClubEntry`` objects, representing the leaderboard rankings for the selected mode.
 
         Raises
         ------
