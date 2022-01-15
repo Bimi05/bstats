@@ -17,4 +17,4 @@ from .clients import SyncClient, AsyncClient
 from .client import APIClient  # 1.1.x
 from .models import *
 from .errors import *
-
+from . import utils
