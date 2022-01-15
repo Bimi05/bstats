@@ -31,19 +31,19 @@ from typing import Any, Callable, Dict, Literal, Optional, Union
 from .errors import Forbidden, ItemNotFound, RateLimitReached, UnexpectedError, InternalServerError
 
 class APIRoute:
-    BASE: str = f"https://api.brawlstars.com/v1"
-
+    BASE: str = "https://api.brawlstars.com/v1"
     def __init__(self, path: str) -> None:
         self.url: str = self.BASE + path
 
     def modify_path(self, new_path: str) -> None:
         self.url: str = self.BASE + new_path
 
+
 class HTTPClient:
-    def __init__(self, timeout, headers, cache) -> None:
-        self.timeout: int = timeout
-        self.headers: Dict[str, str] = headers
-        self.cache: TTLCache = cache
+    def __init__(self, timeout: int, headers: Dict[str, str], cache: TTLCache) -> None:
+        self.timeout = timeout
+        self.headers = headers
+        self.cache = cache
 
     async def _return_data(self, response: aiohttp.ClientResponse):
         if response.headers["Content-Type"][:16] == "application/json":
