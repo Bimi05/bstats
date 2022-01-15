@@ -22,9 +22,6 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-from typing import Union
-
-
 class BSException(Exception):
     """
     Base class for all exceptions raised by the wrapper.
@@ -35,52 +32,50 @@ class BSException(Exception):
 class HTTPException(BSException):
     """
     Base class for all HTTP-related errors.
-    This includes status codes such as:
+    This includes (but is not limited to) status codes such as:
     - ``403``: Invalid Authorization
     - ``404``: Item not Found
-    - ``429``: Rate Limited
-    - ``500``: Internal Server Error
+    - ``429``: User is Rate Limited
+    - ``500``: Unexpected Error occurrence
     - ``503``: API is down
     """
-    from requests import Response
-    from aiohttp import ClientResponse
-
-    def __init__(self, response: Union[Response, ClientResponse], code: int, message: str):
+    def __init__(self, response, code, message):
         super().__init__(f"{response.reason} (Status Code {code}): {message}")
 
-class ProcessingException(BSException):
+class ProcessingError(BSException):
     """
-    Base class for all processing errors
-    - i.e. formatting a tag or receiving a bad request (status code: 400)
+    Base class for all processing errors.
+    Any request that could lead to a 400 will be caught
+    and have a subclass (of this error class) raised
     """
     def __init__(self, message):
-        super().__init__(f"An error occurred while processing the data: {message}")
+        super().__init__(f"An error occurred while processing the supplied data: {message}")
 
 
-class InvalidSuppliedTag(ProcessingException):
-    """The supplied tag is invalid (less than 3 characters, contains invalid characters)."""
+class InvalidSuppliedTag(ProcessingError):
+    """The supplied tag is invalid (less than 3 characters, contains invalid characters, ...)"""
     pass
 
 
-class InappropriateFormat(ProcessingException):
-    """The received format is not proper for an API request."""
+class InappropriateFormat(ProcessingError):
+    """The given data are not appropriate for an API call."""
     pass
 
 
 class Forbidden(HTTPException):
-    """The supplied API token is invalid and/or the authorization has failed."""
+    """The supplied API token is invalid"""
     pass
 
 class ItemNotFound(HTTPException):
-    """The requested item (e.g. player, club) has not been found"""
+    """The requested item has not been found"""
     pass
 
 class RateLimitReached(HTTPException):
     """The API rate-limit has been reached"""
     pass
 
-class InternalAPIError(HTTPException):
-    """An error has occurred during the processing of a request"""
+class UnexpectedError(HTTPException):
+    """An unknown error has occurred during the processing of the request"""
     pass
 
 class InternalServerError(HTTPException):

@@ -27,13 +27,21 @@ import requests
 from .club import Club
 from .brawler import Brawler
 
-from typing import List
+from typing import Any, List
 from ..http import HTTPClient, APIRoute
 from ..utils import camel_to_snake, format_tag
 
 class Profile:
     """
     Represents a Brawl Stars profile.
+
+    Operations
+    ----------
+    - x == y -> Check if two players are equal
+    - x != y -> Check if two players are not equal
+    - hash(x) -> Return ``x``'s hash
+    - str(x) -> Return the player's name and tag
+
 
     Attributes
     ----------
@@ -78,6 +86,12 @@ class Profile:
 
     def __repr__(self) -> str:
         return f"<Player object name='{self.data['name']}' tag='{self.data['tag']}' brawlers={len(self.data['brawlers'])}>"
+
+    def __eq__(self, obj: "Profile") -> bool:
+        return self.name == obj.name and self.tag == obj.tag
+
+    def __ne__(self, obj: "Profile") -> bool:
+        return not self.__eq__(obj)
 
     def __str__(self) -> str:
         return f"{self.data['name']} ({self.data['tag']})"

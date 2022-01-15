@@ -24,13 +24,27 @@ DEALINGS IN THE SOFTWARE.
 
 import re
 
+from typing import Any
 from urllib.parse import quote
-from .errors import InvalidSuppliedTag, InappropriateFormat
+
+from .errors import InvalidSuppliedTag
+
+class _MissingItem:
+    def __str__(self):
+        return "..."
+
+    def __bool__(self):
+        return False
+
+    def __eq__(self, obj):
+        return False
+
+MISSING_ITEM: Any = _MissingItem()
 
 
 def camel_to_snake(text: str) -> str:
     """
-    Helper function to convert camelCase to snake_case.
+    A helper function to convert camelCase to snake_case.
         - e.g. ``bestBigBrawlerTime`` => ``best_big_brawler_time``
 
     Parameters
@@ -49,7 +63,8 @@ def camel_to_snake(text: str) -> str:
 
 def format_tag(tag: str) -> str:
     """
-    Format tag in the correct form to use API calls.
+    A helper function to aid in formatting the
+    given tag properly in the correct format to use API calls.
         - e.g. ``#80V2R98CQ`` => ``%2380V2R98CQ``
 
     This method also utilises and changes characters commonly mistaken
@@ -70,16 +85,15 @@ def format_tag(tag: str) -> str:
 
     Raises
     ------
-    `InappropriateFormat``
-        The tag provided is less than 3 characters in length.
     `InvalidSuppliedTag``
-        The tag contains invalid characters.
+        - The tag provided is less than 3 characters in length.
+        - The tag contains invalid characters.
     """
-    tag = tag.strip().strip("#").upper().replace("B", "8").replace("O", "0")
+    tag = tag.strip().strip("#").upper()
     if len(tag) < 3:
-        raise InappropriateFormat(f"Could not format tag, tag less than 3 characters.")
+        raise InvalidSuppliedTag(f"Could not format tag, tag less than 3 characters.")
 
-    invalid = set((c for c in tag if c.upper() not in "0289PYLQGRJCUV"))
+    invalid = set((c for c in tag if c not in "0289PYLQGRJCUV"))
     if invalid:
         raise InvalidSuppliedTag(f"A tag with invalid characters has been passed. -> \"{', '.join(invalid)}\"")
     return quote(f"#{tag}")

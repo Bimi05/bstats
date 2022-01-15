@@ -28,8 +28,8 @@ import asyncio
 import json
 
 from cachetools import TTLCache
-from typing import Any, Dict, Literal, Optional, Union
-from .errors import Forbidden, ItemNotFound, RateLimitReached, InternalAPIError, InternalServerError
+from typing import Any, Callable, Dict, Literal, Optional, Union
+from .errors import Forbidden, ItemNotFound, RateLimitReached, UnexpectedError, InternalServerError
 
 class APIRoute:
     BASE: str = f"https://api.brawlstars.com/v1"
@@ -41,79 +41,42 @@ class APIRoute:
         self.url: str = self.BASE + new_path
 
 class HTTPClient:
-    def __init__(self, timeout, session, headers, cache) -> None:
+    def __init__(self, timeout, headers, cache) -> None:
         self.timeout: int = timeout
-        self.session: requests.Session = session
         self.headers: Dict[str, str] = headers
         self.cache: TTLCache = cache
 
-    def get_from_cache(self, url: APIRoute) -> Optional[Any]:
-        return self.cache.get(url)
+    async def _return_data(self, response: aiohttp.ClientResponse):
+        if response.headers["Content-Type"][:16] == "application/json":
+            return json.loads(await response.text())
+        return await response.text()
 
-    def request(self, url: APIRoute, *, use_cache: Literal[True, False] = True) -> Optional[Union[Any, str]]:
-        if use_cache and self.get_from_cache(url) is not None:
-            return self.get_from_cache(url)
-
-        try:
-            with self.session.get(url, headers=self.headers, timeout=self.timeout) as resp:
-                try:
-                    data = json.loads(resp.text)
-                except json.JSONDecodeError:
-                    data = resp.text
-
-                code = resp.status_code
-                if code == 403:
-                    raise Forbidden(resp, 403, "The API token you supplied is invalid. Authorization failed.")
-                if code == 404:
-                    raise ItemNotFound(resp, 404, "The item requested has not been found.")
-                if code == 429:
-                    raise RateLimitReached(resp, 429, "You are being rate-limited. Please retry in a few moments.")
-                if code == 500:
-                    raise InternalAPIError(resp, 500, "An unexpected error has occurred.\n{}".format(data))
-                if code == 503:
-                    raise InternalServerError(resp, 503, "The API is down due to in-game maintenance. Please be patient and try again later.")
-        except requests.Timeout:
-            raise InternalServerError(resp, 503, "The API is down due to in-game maintenance. Please be patient and try again later.")
-        else:
-            if 200 <= code < 300:
-                self.cache[url] = data
-                return data
-
-class AsyncHTTPClient:
-    def __init__(self, timeout, session, headers, cache) -> None:
-        self.timeout: int = timeout
-        self.session: aiohttp.ClientSession = session
-        self.headers: Dict[str, str] = headers
-        self.cache: TTLCache = cache
-
-    def get_from_cache(self, url: APIRoute) -> Optional[Any]:
-        return self.cache.get(url)
-
-    async def request(self, url: APIRoute, *, use_cache: Literal[True, False] = True) -> Optional[Union[Any, str]]:
-        if use_cache and self.get_from_cache(url) is not None:
-            return self.get_from_cache(url)
+    async def request(self, url: str, /, *, use_cache: bool = True) -> Optional[Any]:
+        cache_res = self.cache.get(url)
+        if use_cache and cache_res:
+            return cache_res
 
         try:
-            async with self.session.get(url, headers=self.headers, timeout=self.timeout) as resp:
-                try:
-                    data = json.loads(await resp.text())
-                except json.JSONDecodeError:
-                    data = await resp.text()
+            async with aiohttp.ClientSession(loop=asyncio.get_event_loop()) as session:
+                async with session.get(url, headers=self.headers, timeout=self.timeout, ssl=False) as response:
+                    data = await self._return_data(response)
+        except (requests.Timeout, asyncio.TimeoutError):
+            raise InternalServerError(response, 503, "The API is down due to in-game maintenance. Please be patient and try again later.")
 
-                code = resp.status
-                if code == 403:
-                    raise Forbidden(resp, 403, "The API token you supplied is invalid. Authorization failed.")
-                if code == 404:
-                    raise ItemNotFound(resp, 404, "The item requested has not been found.")
-                if code == 429:
-                    raise RateLimitReached(resp, 429, "You are being rate-limited. Please retry in a few moments.")
-                if code == 500:
-                    raise InternalAPIError(resp, 500, "An unexpected error has occurred.\n{}".format(data))
-                if code == 503:
-                    raise InternalServerError(resp, 503, "The API is down due to in-game maintenance. Please be patient and try again later.")
-        except asyncio.TimeoutError:
-            raise InternalServerError(resp, 503, "The API is down due to in-game maintenance. Please be patient and try again later.")
-        else:
-            if 200 <= code < 300:
+        # all good. data has been retrieved and API is functional
+        code = response.status
+        if 200 <= code < 300:
+            if use_cache:
                 self.cache[url] = data
-                return data
+            return data
+
+        if code == 403:
+            raise Forbidden(response, 403, "The API token you supplied is invalid. Authorization failed.")
+        if code == 404:
+            raise ItemNotFound(response, 404, "The item requested has not been found.")
+        if code == 429:
+            raise RateLimitReached(response, 429, "You are being rate-limited. Please retry in a few moments.")
+        if code == 500:
+            raise UnexpectedError(response, 500, "An unexpected error has occurred.\n{}".format(data))
+        if code == 503:
+            raise InternalServerError(response, 503, "The API is down due to in-game maintenance. Please be patient and try again later.")

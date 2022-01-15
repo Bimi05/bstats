@@ -22,27 +22,26 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-import asyncio
-import requests
 import sys
-import re
+import asyncio
+import aiohttp
+import requests
 
 from cachetools import TTLCache
 from typing import Dict, List, Literal, Optional, Type, Union
+from .utils import format_tag
+from .http import APIRoute, HTTPClient
+from .errors import InappropriateFormat
 
-from ..utils import format_tag
-from ..http import APIRoute, HTTPClient
-from ..errors import InappropriateFormat
+from .models.profile import Profile
+from .models.club import Club
+from .models.brawler import Brawler
+from .models.member import ClubMember
+from .models.battlelog import BattlelogEntry
+from .models.leaderboard import LeaderboardEntry
+from .models.rotation import Rotation
 
-from ..models.profile import Profile
-from ..models.club import Club
-from ..models.brawler import Brawler
-from ..models.member import ClubMember
-from ..models.battlelog import BattlelogEntry
-from ..models.leaderboard import LeaderboardEntry
-from ..models.rotation import Rotation
-
-class SyncClient:
+class APIClient:
     """
     Sync/Async Client to access the Brawl Stars API.
 
@@ -57,7 +56,7 @@ class SyncClient:
         How long to wait before terminating requests.
         By default, wait ``45`` seconds.
     """
-    def __init__(self, token: str, *, timeout: int = 45) -> None:
+    def __init__(self, token: str, *, asynchronous: bool, timeout: int = 45) -> None:
         try:
             timeout = int(timeout)
         except ValueError:
@@ -65,6 +64,7 @@ class SyncClient:
         else:
             self.timeout = timeout
 
+        self.use_async = asynchronous
         self.token = token
 
         self.headers = {
@@ -73,6 +73,9 @@ class SyncClient:
         }
 
         self.session = requests.Session()
+        if self.use_async:
+            self.session = aiohttp.ClientSession(loop=asyncio.get_event_loop())
+
         self.cache = TTLCache(3200*5, 60*5)
         self.http_client = HTTPClient(self.timeout, self.headers, self.cache)
         self.BRAWLERS = {brawler.name: brawler.id for brawler in self.get_brawlers()}
@@ -81,15 +84,22 @@ class SyncClient:
         return f"<{self.__class__.__name__} timeout={self.timeout}>"
 
     def __enter__(self):
-        return self
+        if not self.use_async:
+            return self
+        raise TypeError(f"Use 'async with {self.__class__.__name__} as ...:' instead")
 
     def __exit__(self, exc_type, exc, tb):
         self.session.close()
 
-    def close(self) -> None:
-        self.session.close()
+    async def __aenter__(self):
+        if self.use_async:
+            return self
+        raise TypeError(f"Use 'with {self.__class__.__name__} as ...:' instead")
 
-    def get_player(self, tag: str, /, *, use_cache: bool = True) -> Profile:
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.session.close()
+
+    async def get_player(self, tag: str, /, *, use_cache: bool = True) -> Profile:
         """
         Get a player's profile and their stats
 

@@ -27,10 +27,10 @@ import aiohttp
 import sys
 
 from cachetools import TTLCache
-from typing import List, Dict, Union, NoReturn, overload
+from typing import List, Dict, Literal, Union, NoReturn, overload
 
 from ..utils import format_tag
-from ..http import APIRoute, AsyncHTTPClient
+from ..http import APIRoute, HTTPClient
 from ..errors import InappropriateFormat
 
 from ..models.profile import Profile
@@ -38,7 +38,7 @@ from ..models.club import Club
 from ..models.brawler import Brawler
 from ..models.member import ClubMember
 from ..models.battlelog import BattlelogEntry
-from ..models.leaderboard import LeaderboardClubEntry, LeaderboardPlayerEntry
+from ..models.leaderboard import LeaderboardEntry
 from ..models.rotation import Rotation
 
 class AsyncClient:
@@ -84,13 +84,13 @@ class AsyncClient:
         self.cache: TTLCache = TTLCache(3200*5, 60*5)
 
         # we'll need a loop and a connector for aiohttp so let's get those
-        self.loop: asyncio.AbstractEventLoop = options.get("loop", asyncio.get_event_loop())
+        self.loop = options.get("loop", asyncio.get_event_loop())
         self.connector: aiohttp.TCPConnector = options.get("connector")
-        self.session: aiohttp.ClientSession = options.get("session") or aiohttp.ClientSession(connector=self.connector, loop=self.loop)
+        self.session: aiohttp.ClientSession = options.get("session") or aiohttp.ClientSession(loop=self.loop)
 
         # since all settings are ready
         # initialise async HTTP client for requests
-        self.http_client: AsyncHTTPClient = AsyncHTTPClient(self.timeout, self.session, self.headers, self.cache)
+        self.http_client: HTTPClient = HTTPClient(self.timeout, self.headers, self.cache)
         self.loop.create_task(self.__ainit__()) # create a background task to update the brawler dict asynchronously
 
     async def __ainit__(self):
@@ -99,19 +99,21 @@ class AsyncClient:
     def __repr__(self):
         return f"<AsyncClient timeout={self.timeout} do_debug={self.do_debug} prevent_ratelimit={self.prevent_ratelimit}>"
 
-    def __enter__(self) -> NoReturn:
-        raise TypeError(f"{self.__class__.__name__!r} supports only async context management ('async with ...').")
+    def __enter__(self):
+        raise TypeError(f"use 'async with {self.__class__.__name__} as ...:'.")
 
-    def __exit__(self, exc_type, exc, tb) -> None:
-        # NOTE: __exit__() is paired with __enter__();
-        # this is async, however, and __enter__() raises TypeError 
-        # so this will never be actually executed
+    def __exit__(self, exc_type, exc, tb):
+        # this will never be actually called;
+        # it is useful, however, in case someone forgets
         pass
 
     async def __aenter__(self) -> "AsyncClient":
         return self
 
     async def __aexit__(self, exc_type, exc, tb) -> None:
+        await self.session.close()
+
+    async def close(self) -> None:
         await self.session.close()
 
     async def get_player(self, tag: str, *, use_cache: bool = True) -> Profile:
@@ -238,52 +240,15 @@ class AsyncClient:
         data = await self.http_client.request(APIRoute(f"/players/{format_tag(tag)}/battlelog").url, use_cache=use_cache)
         return [BattlelogEntry(battle) for battle in data["items"]]
 
-    @overload
     async def get_leaderboards(
-        self, 
-        mode="players", 
-        *, 
-        country: str, 
-        limit: int, 
-        brawler: Union[int, str], 
-        use_cache: bool
-    ) -> List[LeaderboardPlayerEntry]:
-        ...
-
-    @overload
-    async def get_leaderboards(
-        self, 
-        mode="clubs", 
-        *, 
-        country: str, 
-        limit: int, 
-        brawler: Union[int, str], 
-        use_cache: bool
-    ) -> List[LeaderboardClubEntry]:
-        ...
-
-    @overload
-    async def get_leaderboards(
-        self, 
-        mode="brawlers", 
-        *, 
-        country: str, 
-        limit: int, 
-        brawler: Union[int, str], 
-        use_cache: bool
-    ) -> List[LeaderboardPlayerEntry]:
-        ...
-
-
-    async def get_leaderboards(
-        self, 
-        mode=None, 
-        *, 
-        country=None, 
-        limit=None, 
-        brawler=None, 
-        use_cache=None
-    ) -> Union[List[LeaderboardPlayerEntry], List[LeaderboardClubEntry]]:
+        self,
+        mode: Literal["players", "clubs", "brawlers"],
+        *,
+        region: str = "global",
+        limit: int = 200,
+        brawler: Union[str, int] = None,
+        use_cache: bool = None
+    ) -> List[LeaderboardEntry]:
         """
         Get in-game leaderboard rankings for players, clubs or brawlers.
 
@@ -293,7 +258,7 @@ class AsyncClient:
         mode: ``str``
             The mode to get the rankings for.
             Must be "players", "clubs", or "brawlers".
-        country: ``str``, optional
+        region: ``str``, optional
             The two-letter country code to use in order to search for local leaderboards.
             By default, ``global`` (this means that the global leaderboards will be returned).
         limit: ``int``, optional
@@ -310,8 +275,11 @@ class AsyncClient:
         Returns
         -------
 
-        Union[List[``LeaderboardPlayerEntry``], List[``LeaderboardClubEntry``]]
-            A list consisting of either ``LeaderboardPlayerEntry`` or ``LeaderboardClubEntry`` objects, representing the leaderboard rankings for the selected mode.
+        List[``LeaderboardEntry``]
+            A list consisting of ``LeaderboardEntry`` objects, representing the leaderboard rankings for the selected mode.
+            NOTE: ``LeaderboardEntry`` is a subclass of both ``LeaderboardPlayerEntry`` and ``LeaderboardClubEntry``.
+                If mode is players or brawlers, refer to the attributes of ``LeaderboardPlayerEntry``.
+                Otherwise, refer to the attributes of ``LeaderboardClubEntry``.
 
         Raises
         ------
@@ -345,22 +313,14 @@ class AsyncClient:
             if mode == "brawlers":
                 raise InappropriateFormat("You must supply a brawler name or ID if you want to get the 'brawlers' leaderboard rankings.")
 
-        url = APIRoute(f"/rankings/{country}/{mode}?limit={limit}")
+        url = APIRoute(f"/rankings/{region}/{mode}?limit={limit}")
         if mode == "brawlers":
-            url.modify_path(f"/rankings/{country}/{mode}/{brawler}?limit={limit}")
+            url.modify_path(f"/rankings/{region}/{mode}/{brawler}?limit={limit}")
 
         data = await self.http_client.request(url.url, use_cache=use_cache)
-        mapping = {
-            "players": LeaderboardPlayerEntry,
-            "clubs": LeaderboardClubEntry,
-            "brawlers": LeaderboardPlayerEntry
-        }
+        return [LeaderboardEntry(entry) for entry in data["items"]]
 
-        for name, entry_type in mapping.items():
-            if mode == name:
-                return [entry_type(entry) for entry in data["items"]]
-
-    async def get_event_rotation(self, use_cache: Literal[True, False] = True) -> List[Rotation]:
+    async def get_event_rotation(self, use_cache: bool = True) -> List[Rotation]:
         """
         Get the current in-game ongoing event rotation.
 
