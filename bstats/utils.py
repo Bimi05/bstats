@@ -29,18 +29,6 @@ from urllib.parse import quote
 
 from .errors import InvalidSuppliedTag
 
-class _MissingItem:
-    def __str__(self):
-        return "..."
-
-    def __bool__(self):
-        return False
-
-    def __eq__(self, obj):
-        return False
-
-MISSING_ITEM: Any = _MissingItem()
-
 
 def camel_to_snake(text: str) -> str:
     """
