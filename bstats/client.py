@@ -153,7 +153,7 @@ class APIClient:
         loop = asyncio.get_event_loop()
 
         data = loop.run_until_complete(self.http_client.request(url, use_cache=use_cache))
-        return Club(self, data)
+        return Club(data)
 
     def get_brawlers(self, *, use_cache: bool = True) -> List[Brawler]:
         """
