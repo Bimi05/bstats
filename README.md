@@ -1,3 +1,9 @@
+![Size](https://img.shields.io/github/languages/code-size/Bimi05/bstats)
+![Package-Version](https://img.shields.io/pypi/v/bstats)
+![Python-Version](https://img.shields.io/pypi/pyversions/bstats)
+![License](https://img.shields.io/pypi/l/bstats)
+![Downloads](https://img.shields.io/pypi/dm/bstats)
+
 # BStats
 
 - This library has both a sync and an async client
