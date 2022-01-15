@@ -22,7 +22,6 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-import requests
 import aiohttp
 import asyncio
 import json
@@ -60,7 +59,7 @@ class HTTPClient:
             async with aiohttp.ClientSession(loop=asyncio.get_event_loop()) as session:
                 async with session.get(url, headers=self.headers, timeout=self.timeout, ssl=False) as response:
                     data = await self._return_data(response)
-        except (requests.Timeout, asyncio.TimeoutError):
+        except asyncio.TimeoutError:
             raise InternalServerError(response, 503, "The API is down due to in-game maintenance. Please be patient and try again later.")
 
         # all good. data has been retrieved and API is functional
