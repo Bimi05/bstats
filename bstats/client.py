@@ -28,7 +28,7 @@ import aiohttp
 import requests
 
 from cachetools import TTLCache
-from typing import Dict, List, Literal, Optional, Type, Union
+from typing import Any, List, Literal, TypeVar, Union
 from .utils import format_tag
 from .http import APIRoute, HTTPClient
 from .errors import InappropriateFormat
@@ -40,6 +40,8 @@ from .models.member import ClubMember
 from .models.battlelog import BattlelogEntry
 from .models.leaderboard import LeaderboardEntry
 from .models.rotation import Rotation
+
+T = TypeVar("T")
 
 class APIClient:
     """
@@ -83,6 +85,8 @@ class APIClient:
 
         self.cache = TTLCache(3200*5, 60*5)
         self.http_client = HTTPClient(self.timeout, self.headers, self.cache)
+
+    def __ainit__(self):
         self.BRAWLERS = {brawler.name: brawler.id for brawler in self.get_brawlers()}
 
     def __repr__(self):
@@ -103,6 +107,23 @@ class APIClient:
 
     async def __aexit__(self, exc_type, exc, tb):
         await self.session.close()
+
+    def _get_data(self, url: str, model: T, /, *, use_cache: bool = True) -> Union[T, List[T]]:
+        if self.use_async:
+            return self._aget_data(url, model, use_cache=use_cache)
+
+        data = asyncio.get_event_loop().run_until_complete(self.http_client.request(url, use_cache=use_cache))
+        try:
+            return [model(item) for item in data["items"]]
+        except KeyError:
+            return model(data)
+
+    async def _aget_data(self, url: str, model: T, /, *, use_cache: bool = True) -> Union[T, List[T]]:
+        data = await self.http_client.request(url, use_cache=use_cache)
+        try:
+            return [model(item) for item in data["items"]]
+        except KeyError:
+            return model(data)
 
     def get_player(self, tag: str, /, *, use_cache: bool = True) -> Profile:
         """
@@ -126,11 +147,7 @@ class APIClient:
         ``Profile``
             The ``Profile`` object associated with the profile
         """
-        url = APIRoute(f"/players/{format_tag(tag)}").url
-        loop = asyncio.get_event_loop()
-
-        data = loop.run_until_complete(self.http_client.request(url, use_cache=use_cache))
-        return Profile(self, data)
+        return self._get_data(APIRoute(f"/players/{format_tag(tag)}").url, Profile, use_cache=use_cache)
 
     def get_club(self, tag: str, /, *, use_cache: bool = True) -> Club:
         """
@@ -154,11 +171,7 @@ class APIClient:
         ``Club``
             The ``Club`` object associated with the found club (if any)
         """
-        url = APIRoute(f"/clubs/{format_tag(tag)}").url
-        loop = asyncio.get_event_loop()
-
-        data = loop.run_until_complete(self.http_client.request(url, use_cache=use_cache))
-        return Club(data)
+        return self._get_data(APIRoute(f"/clubs/{format_tag(tag)}").url, Club, use_cache=use_cache)
 
     def get_brawlers(self, *, use_cache: bool = True) -> List[Brawler]:
         """
@@ -179,11 +192,7 @@ class APIClient:
         List[``Brawler``]
             A list consisting of ``Brawler`` objects, representing the available in-game brawlers.
         """
-        url = APIRoute("/brawlers").url
-        loop = asyncio.get_event_loop()
-
-        data = loop.run_until_complete(self.http_client.request(url, use_cache=use_cache))
-        return [Brawler(brawler) for brawler in data["items"]]
+        return self._get_data(APIRoute("/brawlers").url, Brawler, use_cache=use_cache)
 
     def get_members(self, tag: str, /, *, use_cache: bool = True) -> List[ClubMember]:
         """
@@ -209,11 +218,7 @@ class APIClient:
         List[``ClubMember``]
             A list consisting of ``ClubMember`` objects, representing the club's members.
         """
-        url = APIRoute(f"/clubs/{format_tag(tag)}/members").url
-        loop = asyncio.get_event_loop()
-
-        data = loop.run_until_complete(self.http_client.request(url, use_cache=use_cache))
-        return [ClubMember(member) for member in data["items"]]
+        return self._get_data(APIRoute(f"/clubs/{format_tag(tag)}/members").url, ClubMember, use_cache=use_cache)
 
     def get_battlelogs(self, tag: str, /, *, use_cache: bool = True) -> List[BattlelogEntry]:
         """
@@ -237,11 +242,7 @@ class APIClient:
         List[``BattlelogEntry``]
             A list consisting of ``BattlelogEntry`` objects, representing the player's battlelogs
         """
-        url = APIRoute(f"/players/{format_tag(tag)}/battlelog").url
-        loop = asyncio.get_event_loop()
-
-        data = loop.run_until_complete(self.http_client.request(url, use_cache=use_cache))
-        return [BattlelogEntry(battle) for battle in data["items"]]
+        return self._get_data(APIRoute(f"/players/{format_tag(tag)}/battlelog").url, BattlelogEntry, use_cache=use_cache)
 
     def get_leaderboards(self, mode: Literal["players", "clubs", "brawlers"], /, **options) -> List[LeaderboardEntry]:
         """
@@ -321,10 +322,7 @@ class APIClient:
         url = APIRoute(f"/rankings/{region}/{mode}?limit={limit}")
         if mode == "brawlers":
             url.modify_path(f"/rankings/{region}/{mode}/{brawler}?limit={limit}")
-        loop = asyncio.get_event_loop()
-
-        data = loop.run_until_complete(self.http_client.request(url.url, use_cache=use_cache))
-        return [LeaderboardEntry(entry) for entry in data["items"]]
+        return self._get_data(url.url, LeaderboardEntry, use_cache=use_cache)
 
     def get_event_rotation(self, *, use_cache: bool = True) -> List[Rotation]:
         """
@@ -344,9 +342,5 @@ class APIClient:
         List[``Rotation``]
             A list consisting of ``Rotation`` objects, representing the current event rotation
         """
-        url = APIRoute("/events/rotation").url
-        loop = asyncio.get_event_loop()
-
-        data = loop.run_until_complete(self.http_client.request(url, use_cache=use_cache))
-        return [Rotation(rotation) for rotation in data]
+        return self._get_data(APIRoute("/events/rotation").url, Rotation, use_cache=use_cache)
 
