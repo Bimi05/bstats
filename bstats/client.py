@@ -49,8 +49,13 @@ class APIClient:
     ----------
 
     token: ``str``
-        The API token to make requests with
-        Get your own token from https://developer.brawlstars.com/ by making an account
+        The API token to make requests with.
+        Get your own token from https://developer.brawlstars.com/
+        - You have to make an account before you can create an API token!
+
+    asynchronous: ``bool``, optional
+        Whether the client should be asynchronous (use ``async``/``await`` syntax).
+        By default, ``False``.
 
     timeout: ``int``, optional
         How long to wait before terminating requests.
@@ -81,7 +86,7 @@ class APIClient:
         self.BRAWLERS = {brawler.name: brawler.id for brawler in self.get_brawlers()}
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} timeout={self.timeout}>"
+        return f"<{self.__class__.__name__} asynchronous={self.use_async} timeout={self.timeout}>"
 
     def __enter__(self):
         if not self.use_async:
@@ -99,7 +104,7 @@ class APIClient:
     async def __aexit__(self, exc_type, exc, tb):
         await self.session.close()
 
-    async def get_player(self, tag: str, /, *, use_cache: bool = True) -> Profile:
+    def get_player(self, tag: str, /, *, use_cache: bool = True) -> Profile:
         """
         Get a player's profile and their stats
 
