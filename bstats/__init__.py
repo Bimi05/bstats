@@ -13,8 +13,7 @@ __author__ = "Bimi05"
 __license__ = "MIT"
 __version__ = "1.1.0"
 
-from .clients import SyncClient, AsyncClient
-from .client import APIClient  # 1.1.x
+from .client import APIClient
 from .models import *
 from .errors import *
 from . import utils
