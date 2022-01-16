@@ -56,7 +56,7 @@ class APIClient:
         How long to wait before terminating requests.
         By default, wait ``45`` seconds.
     """
-    def __init__(self, token: str, *, asynchronous: bool, timeout: int = 45) -> None:
+    def __init__(self, token: str, *, asynchronous: bool = False, timeout: int = 45) -> None:
         try:
             timeout = int(timeout)
         except ValueError:
@@ -69,7 +69,7 @@ class APIClient:
 
         self.headers = {
             "Authorization": f"Bearer {self.token}",
-            "User-Agent": f"BStats/1.1.0 (Python {sys.version_info[0]}.{sys.version_info[1]})"
+            "User-Agent": "BStats/1.1.0 (Python {0[0]}.{0[1]}, Aiohttp {1})".format(sys.version_info, aiohttp.__version__)
         }
 
         self.session = requests.Session()
