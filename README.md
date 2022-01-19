@@ -24,7 +24,7 @@ pip install bstats
 
 ## Examples
 
-####Sync example
+#### Sync example
 ```py
 import bstats
 
