@@ -1,0 +1,37 @@
+name: Feature Request
+description: Request a new feature to be added to the project
+body:
+  - type: input
+    attributes:
+      label: Overview
+      description: A quick summary of what the feature will do
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: The Problem it solves
+      description: >
+         The problem that this feature fixes, if any.
+  - type: textarea
+    attributes:
+      label: The Solution
+      description: >
+        The solution that this feature provides. Does it make any process easier or possible?
+    validations:
+      required: true
+  - type: checkboxes
+    attributes:
+      label: Checklist
+      description: >
+        Let's ensure your request is proper!
+      options:
+        - label: The new code has been fully and thoroughly tested.
+          required: true
+        - label: If any "type: ignore" comments were used, an additional comment explaining the reason has also been made.
+          required: true
+        - label: All the docstrings have been properly updated or added to match the addition.
+          required: true
+  - type: textarea
+    attributes:
+      label: Additional information
+      description: Is there anything else you would like to say? Please do so here!
