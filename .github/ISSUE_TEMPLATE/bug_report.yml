@@ -25,6 +25,8 @@ body:
       description: >
         A short piece of code that showcases the bug
       render: python
+    validations:
+      required: true
   - type: textarea
     attributes:
       label: Expected output
