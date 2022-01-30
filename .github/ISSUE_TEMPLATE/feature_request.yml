@@ -27,7 +27,7 @@ body:
       options:
         - label: The new code has been fully and thoroughly tested.
           required: true
-        - label: If any "type: ignore" comments were used, an additional comment explaining the reason has also been made.
+        - label: If any type comments were used, an additional comment explaining the reason has also been made.
           required: true
         - label: All the docstrings have been properly updated or added to match the addition.
           required: true
