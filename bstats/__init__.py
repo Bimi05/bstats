@@ -12,11 +12,12 @@ __author__ = "Bimi05"
 __license__ = "MIT"
 __version__ = "1.1.0"
 
-import discord, logging
+import logging
 from typing import NamedTuple
 
 from .client import Client
 from .errors import *
+
 from . import utils
 from .profile import *
 from .club import *
@@ -34,5 +35,7 @@ class VerInfo(NamedTuple):
     level: str
     serial: int
 
-version_info = VerInfo(1, 1, 0, level="alpha", serial=0)
+major, minor, micro = (int(num) for num in __version__.split("."))
+version_info = VerInfo(major, minor, micro, level="alpha", serial=0)
+
 logging.getLogger(__name__).addHandler(logging.NullHandler())
