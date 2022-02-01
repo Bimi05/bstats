@@ -31,12 +31,11 @@ import aiohttp
 import requests
 
 from cachetools import TTLCache
-from functools import wraps, partial
-from typing import List, Literal, TypeVar, Union
+from typing import List, Literal, TypeVar, Union, overload
 
 from .utils import format_tag
 from .http import APIRoute, HTTPClient
-from .errors import InappropriateFormat
+from .errors import InappropriateFormat, NoSuppliedToken
 
 from .profile import Profile
 from .club import Club
@@ -75,16 +74,19 @@ class Client:
             self.timeout = timeout
 
         self.use_async = asynchronous
+
+        if not token:
+            raise NoSuppliedToken("You have to supply a token to access the API.")
+
         self.token = token
         self.headers = {
             "Authorization": "Bearer {}".format(self.token),
-            "User-Agent": "BStats/{0} (Python {1[0]}.{1[1]}, Aiohttp {2})".format(self.VERSION, sys.version_info, aiohttp.__version__)
+            "User-Agent": "BStats/{0} (Python {1[0]}.{1[1]}, Aiohttp {2})"\
+                .format(self.VERSION, sys.version_info, aiohttp.__version__)
         }
 
-        self.session = aiohttp.ClientSession(loop=asyncio.get_event_loop()) if self.use_async else requests.Session()
-        # asyncio.get_event_loop() is deprecated in python 3.10, so max supported python version is 3.9.x
-
-        self.cache = TTLCache(3200*5, 60*5)
+        self.session = aiohttp.ClientSession(loop=self._make_loop()) if self.use_async else requests.Session()
+        self.cache = TTLCache(3200 * 5, 60 * 5)
         self.http_client = HTTPClient(self.timeout, self.headers, self.cache)
 
     async def __ainit__(self) -> None:
@@ -112,6 +114,18 @@ class Client:
         if not self.session.closed:
             await self.session.close()
 
+    def _make_loop(self):
+        if sys.version_info >= (3, 10):
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+        else:
+            loop = asyncio.get_event_loop()
+        return loop
+
+
     def _get_data(
         self, 
         route: APIRoute, 
@@ -126,8 +140,7 @@ class Client:
         - either the model itself is returned.
         - or a list full of the model is returned.
         """
-        loop = asyncio.get_event_loop()
-        data = loop.run_until_complete(self.http_client.request(route.url, use_cache=use_cache))
+        data = self._make_loop().run_until_complete(self.http_client.request(route.url, use_cache=use_cache))
 
         try:
             return [model(item) for item in data["items"]]
@@ -170,6 +183,15 @@ class Client:
             except TypeError:
                 return model(self, data) # Profile takes two arguments
 
+
+    @overload
+    def get_player(self, tag: str, *, use_cache: Literal[True]) -> Profile:
+        ...
+
+    @overload
+    def get_player(self, tag: str, *, use_cache: Literal[False]) -> Profile:
+        ...
+
     def get_player(self, tag: str, *, use_cache: bool = True) -> Profile:
         """
         Get a player's profile and their statistics.
@@ -190,6 +212,15 @@ class Client:
             return self._aget_data(APIRoute(f"/players/{format_tag(tag)}"), Profile, use_cache=use_cache)
         return self._get_data(APIRoute(f"/players/{format_tag(tag)}"), Profile, use_cache=use_cache)
 
+
+    @overload
+    def get_club(self, tag: str, *, use_cache: Literal[True]) -> Club:
+        ...
+
+    @overload
+    def get_club(self, tag: str, *, use_cache: Literal[False]) -> Club:
+        ...
+
     def get_club(self, tag: str, *, use_cache: bool = True) -> Club:
         """
         Get a club and its statistics.
@@ -208,6 +239,15 @@ class Client:
         """
         return self._get_data(APIRoute(f"/clubs/{format_tag(tag)}").url, Club, use_cache=use_cache)
 
+
+    @overload
+    def get_brawlers(self, *, use_cache: Literal[True]) -> List[Brawler]:
+        ...
+
+    @overload
+    def get_brawlers(self, *, use_cache: Literal[False]) -> List[Brawler]:
+        ...
+
     def get_brawlers(self, *, use_cache: bool = True) -> List[Brawler]:
         """
         Get all the available brawlers and their details.
@@ -222,6 +262,15 @@ class Client:
             A list of `Brawler` objects representing the available in-game brawlers.
         """
         return self._get_data(APIRoute("/brawlers").url, Brawler, use_cache=use_cache)
+
+
+    @overload
+    def get_members(self, tag: str, *, use_cache: Literal[True]) -> List[ClubMember]:
+        ...
+
+    @overload
+    def get_members(self, tag: str, *, use_cache: Literal[False]) -> List[ClubMember]:
+        ...
 
     def get_members(self, tag: str, *, use_cache: bool = True) -> List[ClubMember]:
         """
@@ -245,6 +294,15 @@ class Client:
         """
         return self._get_data(APIRoute(f"/clubs/{format_tag(tag)}/members").url, ClubMember, use_cache=use_cache)
 
+
+    @overload
+    def get_battlelogs(self, tag: str, *, use_cache: Literal[True]) -> List[BattlelogEntry]:
+        ...
+
+    @overload
+    def get_battlelogs(self, tag: str, *, use_cache: Literal[False]) -> List[BattlelogEntry]:
+        ...
+
     def get_battlelogs(self, tag: str, *, use_cache: bool = True) -> List[BattlelogEntry]:
         """
         Get a player's battlelogs
@@ -262,6 +320,19 @@ class Client:
             A list of `BattlelogEntry` objects representing the player's battlelog entries
         """
         return self._get_data(APIRoute(f"/players/{format_tag(tag)}/battlelog").url, BattlelogEntry, use_cache=use_cache)
+
+
+    @overload
+    def get_leaderboards(self, mode="players", **options) -> List[LeaderboardEntry]:
+        ...
+
+    @overload
+    def get_leaderboards(self, mode="clubs", **options) -> List[LeaderboardEntry]:
+        ...
+
+    @overload
+    def get_leaderboards(self, mode="brawlers", **options) -> List[LeaderboardEntry]:
+        ...
 
     def get_leaderboards(self, mode: Literal["players", "clubs", "brawlers"], **options) -> List[LeaderboardEntry]:
         """
@@ -337,6 +408,15 @@ class Client:
             url += "?limit={}"
 
         return self._get_data(APIRoute(url.format(region, mode, brawler, limit)).url, LeaderboardEntry, use_cache=use_cache)
+
+
+    @overload
+    def get_event_rotation(self, *, use_cache: Literal[True]) -> List[Rotation]:
+        ...
+
+    @overload
+    def get_event_rotation(self, *, use_cache: Literal[False]) -> List[Rotation]:
+        ...
 
     def get_event_rotation(self, *, use_cache: bool = True) -> List[Rotation]:
         """
