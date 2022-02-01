@@ -76,7 +76,7 @@ class HTTPClient:
         self.headers = headers
         self.cache = cache
 
-    async def _return_data(self, response: aiohttp.ClientResponse) -> Union[Any, str]:
+    async def read_resp(self, response: aiohttp.ClientResponse) -> Union[Any, str]:
         if response.headers["Content-Type"][:16] == "application/json":
             return json.loads(await response.text())
         return await response.text()
@@ -103,7 +103,7 @@ class HTTPClient:
         try:
             async with aiohttp.ClientSession(loop=asyncio.get_event_loop()) as session:
                 async with session.get(url, headers=self.headers, timeout=self.timeout, ssl=False) as response:
-                    data = await self._return_data(response)
+                    data = await self.read_resp(response)
         except asyncio.TimeoutError:
             raise APIMaintenanceError(response, 503, "The API is down due to in-game maintenance. Please be patient and try again later.")
 
