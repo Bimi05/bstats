@@ -28,7 +28,7 @@ pip install bstats
 ```py
 import bstats
 
-client = bstats.SyncClient("token") # Never post any of your tokens for APIs on a public github!
+client = bstats.Client("token") # Never post any of your tokens for APIs on a public github!
 
 player = client.get_player("80V2R98CQ")
 print(player.trophies)
@@ -71,7 +71,7 @@ for event in rotation:
 import asyncio
 import bstats
 
-client = bstats.AsyncClient("token") # Never post any of your tokens for APIs on a public github!
+client = bstats.Client("token", asynchronous=True) # Never post any of your tokens for APIs on a public github!
 
 # to use the async client, we'll need an async function
 async def main():
