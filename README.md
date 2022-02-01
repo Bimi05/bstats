@@ -22,6 +22,12 @@ Install the latest build:
 pip install bstats
 ```
 
+Install the development (alpha/beta) version:
+```
+pip install git+https://github.com/Bimi05/bstats
+```
+- **Be warned! Alpha/Beta releases may contain bugs! Please report them in the issues tab.**
+
 ## Examples
 
 #### Sync example
