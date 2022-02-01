@@ -60,6 +60,10 @@ class InappropriateFormat(ProcessingError):
     """The given data are not appropriate for an API call."""
     pass
 
+class NoSuppliedToken(ProcessingError):
+    """No API token was supplied."""
+    pass
+
 
 class Forbidden(HTTPError):
     """The supplied API token is invalid."""
