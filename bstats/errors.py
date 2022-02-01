@@ -24,12 +24,13 @@ DEALINGS IN THE SOFTWARE.
 
 class BSException(Exception):
     """
-    Base class for all exceptions raised by the wrapper.
-    This class ideally catches all the errors that the library may throw
+    Base class for all library exceptions.
+    - This exception class ideally catches all the errors thrown by the wrapper.
     """
     pass
 
-class HTTPException(BSException):
+
+class HTTPError(BSException):
     """
     Base class for all HTTP-related errors.
     This includes (but is not limited to) status codes such as:
@@ -44,40 +45,38 @@ class HTTPException(BSException):
 
 class ProcessingError(BSException):
     """
-    Base class for all processing errors.
-    Any request that could lead to a 400 will be caught
-    and have a subclass (of this error class) raised
+    Base class for all data processing errors.
+    This gets raised in order to minimise and prevent `400` status codes.
     """
     def __init__(self, message):
         super().__init__(f"An error occurred while processing the supplied data: {message}")
 
 
 class InvalidSuppliedTag(ProcessingError):
-    """The supplied tag is invalid (less than 3 characters, contains invalid characters, ...)"""
+    """The supplied tag is not properly formatted."""
     pass
-
 
 class InappropriateFormat(ProcessingError):
     """The given data are not appropriate for an API call."""
     pass
 
 
-class Forbidden(HTTPException):
-    """The supplied API token is invalid"""
+class Forbidden(HTTPError):
+    """The supplied API token is invalid."""
     pass
 
-class ItemNotFound(HTTPException):
-    """The requested item has not been found"""
+class NotFound(HTTPError):
+    """The requested item has not been found."""
     pass
 
-class RateLimitReached(HTTPException):
-    """The API rate-limit has been reached"""
+class RateLimited(HTTPError):
+    """The API rate-limit has been reached."""
     pass
 
-class UnexpectedError(HTTPException):
-    """An unknown error has occurred during the processing of the request"""
+class APIServerError(HTTPError):
+    """An unknown server error occurred during the request."""
     pass
 
-class InternalServerError(HTTPException):
-    """The API is temporarily unavailable due to in-game maintenance"""
+class APIMaintenanceError(HTTPError):
+    """The API is temporarily unavailable due to in-game maintenance."""
     pass

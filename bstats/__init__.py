@@ -1,9 +1,8 @@
 """
-Brawl Stars API wrapper
-~~~~~~~~~~~~~~~~~~~~~~~
+## Brawl Stars API wrapper
 
-A fundamental wrapper for the Brawl Stars API
-covering all endpoints and including many features!
+A basic Brawl Stars API wrapper,
+covering all endpoints with many features!
 
 Copyright (c) 2022-present Bimi05
 """
@@ -13,7 +12,27 @@ __author__ = "Bimi05"
 __license__ = "MIT"
 __version__ = "1.1.0"
 
-from .client import APIClient
-from .models import *
+import discord, logging
+from typing import NamedTuple
+
+from .client import Client
 from .errors import *
 from . import utils
+from .profile import *
+from .club import *
+from .brawler import *
+from .member import *
+from .leaderboard import *
+from .battlelog import *
+from .rotation import *
+
+
+class VerInfo(NamedTuple):
+    major: int
+    minor: int
+    micro: int
+    level: str
+    serial: int
+
+version_info = VerInfo(1, 1, 0, level="alpha", serial=0)
+logging.getLogger(__name__).addHandler(logging.NullHandler())

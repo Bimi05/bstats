@@ -24,7 +24,6 @@ DEALINGS IN THE SOFTWARE.
 
 import re
 
-from typing import Any
 from urllib.parse import quote
 
 from .errors import InvalidSuppliedTag
@@ -32,58 +31,45 @@ from .errors import InvalidSuppliedTag
 
 def camel_to_snake(text: str) -> str:
     """
-    A helper function to convert camelCase to snake_case.
-        - e.g. ``bestBigBrawlerTime`` => ``best_big_brawler_time``
+    A helper function to convert `camelCase` to `snake_case`.
+    - e.g. `bestBigBrawlerTime` -> `best_big_brawler_time`
 
-    Parameters
-    ----------
+    ### Parameters
+    text: `str`
+        The text to restructure from `camelCase` to `snake_case`.
 
-    text: ``str``
-        The text to restructure from camelCase to snake_case
-
-    Returns
-    -------
-    ``str``
-        The restructured snake_case text
+    ### Returns
+    `str`
+        The restructured `snake_case` text.
     """
     return re.compile(r"(?<!^)(?=[A-Z])").sub("_", text).lower()
 
 
 def format_tag(tag: str) -> str:
     """
-    A helper function to aid in formatting the
-    given tag properly in the correct format to use API calls.
-        - e.g. ``#80V2R98CQ`` => ``%2380V2R98CQ``
+    A helper function to format the tag in the correct format for API calls.
+    - e.g. `#80v2r98cq` -> `%2380V2R98CQ`
 
-    This method also utilises and changes characters commonly mistaken
-    for correct ones.
-    - For example, ``OVRCC2O`` would return ``0VRCC20`` since O is invalid, but easily mistaken for 0
-    - The same applies for ``B`` (would return ``8``) and so on
-
-
-    Parameters
-    ----------
-    tag: ``str``
+    ### Parameters
+    tag: `str`
         The tag to format.
 
-    Returns
-    -------
-    ``str``
+    ### Returns
+    `str`
         The formatted version of the provided tag.
 
-    Raises
-    ------
-    `InvalidSuppliedTag``
+    ### Raises
+    `~.InvalidSuppliedTag`
         - The tag provided is less than 3 characters in length.
-        - The tag contains invalid characters.
+        - The tag provided contains invalid characters.
     """
-    tag = tag.strip().strip("#").upper()
+    tag = tag.strip("# ").upper()
     if len(tag) < 3:
-        raise InvalidSuppliedTag(f"Could not format tag, tag less than 3 characters.")
+        raise InvalidSuppliedTag("Could not format tag, tag less than 3 characters.")
 
-    invalid = set((c for c in tag if c not in "0289PYLQGRJCUV"))
+    invalid = tuple(dict.fromkeys([c for c in tag if c not in "0289PYLQGRJCUV"]))
     if invalid:
-        raise InvalidSuppliedTag(f"A tag with invalid characters has been passed. -> \"{', '.join(invalid)}\"")
+        raise InvalidSuppliedTag("A tag with invalid characters has been supplied.\nInvalid character(s): {}".format(", ".join(invalid)))
     return quote(f"#{tag}")
 
 
@@ -92,20 +78,24 @@ def calculate_exp(exp_points: int, /) -> str:
     A helper function that calcuates the experience the user is currently at
     and the experience needed for the next level.
 
-    Parameters
-    ----------
-
-    exp_points: ``int``
+    ### Parameters
+    exp_points: `int`
         The total experience points that the user has gained.
-        You can access this via the ``exp_points`` property of this class
 
-    Returns
-    -------
-
-    ``str``
-        A string following the format "current_exp/required_exp"
+    ### Returns
+    `str`
+        A string following the format: "current_exp/required_exp"
         - i.e. 1652/1760
+
+    ### Raises
+    `TypeError`
+        `exp_points` is not an integer and is not convertible to an integer.
     """
+    try: 
+        exp_points = int(exp_points)
+    except ValueError:
+        raise TypeError(f"'exp_points' must be convertible to int; {exp_points.__class__.__name__!r} cannot be converted.")
+
     required, total = 30, exp_points
     while total >= 0:
         required += 10
@@ -113,5 +103,4 @@ def calculate_exp(exp_points: int, /) -> str:
 
     if total < 0:
         total += required
-
     return f"{total}/{required}"
