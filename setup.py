@@ -20,6 +20,10 @@ if version.endswith(("a", "b", "rc")):
     except Exception:
         pass
 
+packages = [
+    "bstats"
+]
+    
 # set it up and install
 setup(
     name="bstats",
@@ -30,6 +34,7 @@ setup(
     project_urls={
         "Issues": "https://github.com/Bimi05/bstats/issues"
     },
+    packages=packages,
     description="A fundamental wrapper for the Brawl Stars API covering all endpoints and including many features!",
     long_description=readme,
     long_description_content_type="text/markdown",
