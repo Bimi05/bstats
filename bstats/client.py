@@ -237,7 +237,9 @@ class Client:
         `~.Club`
             A `Club` object representing the club.
         """
-        return self._get_data(APIRoute(f"/clubs/{format_tag(tag)}").url, Club, use_cache=use_cache)
+        if self.use_async:
+            return self._aget_data(APIRoute(f"/clubs/{format_tag(tag)}"), Club, use_cache=use_cache)
+        return self._get_data(APIRoute(f"/clubs/{format_tag(tag)}"), Club, use_cache=use_cache)
 
 
     @overload
@@ -261,7 +263,9 @@ class Client:
         List[`~.Brawler`]
             A list of `Brawler` objects representing the available in-game brawlers.
         """
-        return self._get_data(APIRoute("/brawlers").url, Brawler, use_cache=use_cache)
+        if self.use_async:
+            return self._aget_data(APIRoute("/brawlers"), Brawler, use_cache=use_cache)
+        return self._get_data(APIRoute("/brawlers"), Brawler, use_cache=use_cache)
 
 
     @overload
@@ -292,7 +296,9 @@ class Client:
         List[`~.ClubMember`]
             A list of `ClubMember` objects representing the club's members.
         """
-        return self._get_data(APIRoute(f"/clubs/{format_tag(tag)}/members").url, ClubMember, use_cache=use_cache)
+        if self.use_async:
+            return self._aget_data(APIRoute(f"/clubs/{format_tag(tag)}/members"), ClubMember, use_cache=use_cache)
+        return self._get_data(APIRoute(f"/clubs/{format_tag(tag)}/members"), ClubMember, use_cache=use_cache)
 
 
     @overload
@@ -319,7 +325,9 @@ class Client:
         List[`~.BattlelogEntry`]
             A list of `BattlelogEntry` objects representing the player's battlelog entries
         """
-        return self._get_data(APIRoute(f"/players/{format_tag(tag)}/battlelog").url, BattlelogEntry, use_cache=use_cache)
+        if self.use_async:
+            return self._aget_data(APIRoute(f"/players/{format_tag(tag)}/battlelog"), BattlelogEntry, use_cache=use_cache)
+        return self._get_data(APIRoute(f"/players/{format_tag(tag)}/battlelog"), BattlelogEntry, use_cache=use_cache)
 
 
     @overload
@@ -407,7 +415,9 @@ class Client:
         if limit < 200:
             url += "?limit={}"
 
-        return self._get_data(APIRoute(url.format(region, mode, brawler, limit)).url, LeaderboardEntry, use_cache=use_cache)
+        if self.use_async:
+            return self._aget_data(APIRoute(url.format(region, mode, brawler, limit)), LeaderboardEntry, use_cache=use_cache)
+        return self._get_data(APIRoute(url.format(region, mode, brawler, limit)), LeaderboardEntry, use_cache=use_cache)
 
 
     @overload
@@ -430,5 +440,7 @@ class Client:
         List[`~.Rotation`]
             A list of `Rotation` objects representing the current event rotation.
         """
-        return self._get_data(APIRoute("/events/rotation").url, Rotation, use_cache=use_cache)
+        if self.use_async:
+            return self._aget_data(APIRoute("/events/rotation"), Rotation, use_cache=use_cache)
+        return self._get_data(APIRoute("/events/rotation"), Rotation, use_cache=use_cache)
 
