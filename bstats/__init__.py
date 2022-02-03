@@ -35,7 +35,7 @@ class VerInfo(NamedTuple):
     level: str
     serial: int
 
-major, minor, micro = (int(num) for num in __version__.split("."))
+major, minor, micro = (int(num) for num in __version__[:-1].split("."))
 version_info = VerInfo(major, minor, micro, level="alpha", serial=0)
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
