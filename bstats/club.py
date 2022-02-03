@@ -30,35 +30,31 @@ class Club:
     """
     Represents a Brawl Stars club.
 
-    Attributes
-    ----------
-
-    name: ``str``
+    ### Attributes
+    name: `str`
         The club's name.
-    tag: ``str``
-        The club's unique tag.
-    description: ``str``
-        The club's clean (as it is/with no modification) description.
-    trophies: ``int``
+    tag: `str`
+        The club's tag.
+    description: `str`
+        The club's description.
+    trophies: `int`
         The club's current total trophies.
-    required_trophies: ``int``
-        The club's required trophies for a new member to join.
-    members: List[``ClubMember``]
-        A list consisting of ``ClubMember`` objects, representing each of the club's members.
-    type: ``str``
-        The club's type (i.e. Open/Invite Only/Closed).
-    badge_id: ``int``
+    required_trophies: `int`
+        The trophies that are required for a new member to join.
+    members: List[`~.ClubMember`]
+        A list consisting of `ClubMember` objects, representing the club's members.
+    type: `str`
+        The club's type (i.e. "Open"/"Invite Only"/"Closed").
+    badge_id: `int`
         The club's badge ID.
-    president: ``ClubMember``
-        A ``ClubMember`` object representing the club's president.
+    president: `~.ClubMember`
+        A `ClubMember` object representing the club's president.
     """
-    def __init__(self, data):
-        self.data = {}
-        for key in data:
-            self.data[camel_to_snake(key)] = data[key]
+    def __init__(self, data: dict):
+        self.data = {camel_to_snake(key): value for key, value in data.items()}
 
     def __repr__(self):
-        return f"<Club object name='{self.data['name']}' tag='{self.data['tag']}' members={len(self.data['members'])}>"
+        return f"<Club name={self.data['name']!r} tag={self.data['tag']!r} members={len(self.data['members'])}>"
 
     def __str__(self):
         return f"{self.data['name']} ({self.data['tag']})"
@@ -66,48 +62,47 @@ class Club:
 
     @property
     def name(self) -> str:
-        """``str``: The club's name."""
+        """`str`: The club's name."""
         return self.data["name"]
 
     @property
     def tag(self) -> str:
-        """``str``: The club's unique tag."""
+        """`str`: The club's tag."""
         return self.data["tag"]
 
     @property
     def description(self) -> str:
-        """``str``: The club's clean (as it is/with no modification) description."""
+        """`str`: The club's description."""
         return self.data["description"]
 
     @property
     def trophies(self) -> int:
-        """``int``: The club's current total trophies."""
+        """`int`: The club's current total trophies."""
         return self.data["trophies"]
 
     @property
     def required_trophies(self) -> int:
-        """``int``: The club's required trophies for a new member to join."""
+        """`int`: The trophies that are required for a new member to join."""
         return self.data["required_trophies"]
 
     @property
     def members(self) -> List[ClubMember]:
-        """List[``ClubMember``]: A list consisting of ``ClubMember`` objects, representing each of the club's members."""
+        """List[`~.ClubMember`]: A list consisting of `ClubMember` objects, representing the club's members."""
         return [ClubMember(member) for member in self.data["members"]]
 
     @property
     def type(self) -> str:
-        """``str``: The club's type (i.e. Open/Invite Only/Closed)."""
+        """`str`: The club's type (i.e. "Open"/"Invite Only"/"Closed")."""
         return self.data["type"].capitalize() if self.data["type"].lower() != "inviteonly" else "Invite Only"
 
     @property
     def badge_id(self) -> int:
-        """``int``: The club's badge ID."""
+        """`int`: The club's badge ID."""
         return self.data["badge_id"]
 
     @property
     def president(self):
-        """``ClubMember``: A ``ClubMember`` object representing the club's president."""
-        for cm in self.members:
-            if cm.role == "President":
-                return ClubMember(cm)
-
+        """`~.ClubMember`: A `ClubMember` object representing the club's president."""
+        for m in self.members:
+            if m.role == "President":
+                return m
