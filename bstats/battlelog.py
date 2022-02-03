@@ -36,7 +36,7 @@ class EntryBrawler:
     name: `str`
         The brawler's name.
     id: `int`
-        The brawler's unique ID.
+        The brawler's ID.
     power: `int`
         The brawler's power level (1-11 exclusive).
     trophies: `int`
@@ -46,7 +46,7 @@ class EntryBrawler:
         self.brawler = brawler
 
     def __repr__(self) -> str:
-        return f"<BattlelogEntryBrawler object name={self.brawler['name'].title()!r} id={self.brawler['id']}>"
+        return f"<EntryBrawler name={self.brawler['name'].title()!r} id={self.brawler['id']}>"
 
 
     @property
@@ -72,13 +72,14 @@ class EntryBrawler:
 
 class EntryPlayer:
     """
+    # Do not manually initialise this.
     Represents a player in a Brawl Stars battle log entry.
 
     ### Attributes
     name: `str`
         The player's name.
     tag: `str`
-        The player's unique tag.
+        The player's tag.
     brawler: `~.EntryBrawler`
         A `EntryBrawler` object representing the player's brawler.
     """
@@ -86,7 +87,7 @@ class EntryPlayer:
         self.player = player
 
     def __repr__(self) -> str:
-        return f"<BattlelogEntryPlayer name={self.player['name']!r} tag='{self.player['tag']}'>"
+        return f"<EntryPlayer name={self.player['name']!r} tag={self.player['tag']!r}>"
 
     def __str__(self) -> str:
         return f"{self.player['name']} ({self.player['tag']})"
@@ -94,17 +95,17 @@ class EntryPlayer:
 
     @property
     def name(self) -> str:
-        """``str``: The player's name."""
+        """`str`: The player's name."""
         return self.player["name"]
 
     @property
     def tag(self) -> str:
-        """``str``: The player's unique tag."""
+        """`str`: The player's tag."""
         return self.player["tag"]
 
     @property
     def brawler(self) -> EntryBrawler:
-        """`EntryBrawler`: A `EntryBrawler` object representing the player's brawler."""
+        """`~.EntryBrawler`: A `EntryBrawler` object representing the player's brawler."""
         return EntryBrawler(self.player["brawler"])
 
 
@@ -114,23 +115,23 @@ class BattlelogEntry:
 
     ### Attributes
     name: `str`
-        The battle's gamemode name.
+        The mode's name.
     id: `int`
-        The battle's gamemode ID.
+        The mode's ID.
     map: `str`
-        The battle's gamemode map.
-    result: ``str``
-        The result of the battle (Defeat/Draw/Victory or the rank (1st, 2nd, ...) depending on the gamemode).
-    time: ``str``
-        A string representing the time at which the entry was recorded.
-    duration: Tuple[``int``, ``int``]
-        A tuple representing how long the battle lasted (e.g. (2, 21) first number are the minutes, second are the seconds).
-    trophy_change: ``int``
-        The amount of trophies the player won or lost from the battle
-    players: Union[List[``BattlelogEntryPlayer``], List[List[``BattlelogEntryPlayer``]]]
+        The mode's map. If `None`, return "Community Map".
+    result: `str`
+        The result of the battle (Defeat/Draw/Victory in case of 3v3, the rank in case of showdown).
+    time: `str`
+        The time at which the entry was recorded.
+    duration: Tuple[`int`, `int`]
+        How long the battle lasted.
+    trophy_change: `int`
+        The amount of trophies the player gained or lost from the battle.
+    players: List[`~.EntryPlayer`]
         The players that took part in the battle.
-        .. note:: A single list of ``BattlelogEntryPlayer`` objects indicates the gamemode was solo showdown. 
-            If the list is nested, it's either duo showdown or a 3vs3 gamemode.
+    star_player: `~.EntryPlayer`
+        The star player of the battle.
     """
     def __init__(self, data: dict) -> None:
         self.data = {}
@@ -190,14 +191,6 @@ class BattlelogEntry:
             return self.data["battle"]["trophyChange"]
 
     @property
-    def star_player(self) -> EntryPlayer:
-        """`~.EntryPlayer`: The star player of the battle."""
-        try:
-            return EntryPlayer(self.data["battle"]["star_player"])
-        except KeyError: # the API returns camelCased keys; catch the issue in case it's not converted to snake_case
-            return EntryPlayer(self.data["battle"]["starPlayer"])
-
-    @property
     def players(self) -> List[EntryPlayer]:
         """List[`~.EntryPlayer`]: The players that took part in the battle."""
         try:
@@ -212,3 +205,11 @@ class BattlelogEntry:
             return players
         else:
             return [EntryPlayer(player) for player in players]
+
+    @property
+    def star_player(self) -> EntryPlayer:
+        """`~.EntryPlayer`: The star player of the battle."""
+        try:
+            return EntryPlayer(self.data["battle"]["star_player"])
+        except KeyError: # the API returns camelCased keys; catch the issue in case it's not converted to snake_case
+            return EntryPlayer(self.data["battle"]["starPlayer"])
