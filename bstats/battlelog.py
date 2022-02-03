@@ -147,7 +147,10 @@ class BattlelogEntry:
     @property
     def mode_name(self) -> str:
         """``str``: The battle's gamemode name."""
-        name = self.data["event"]["mode"] or self.data["battle"]["mode"]
+        try:
+            name = self.data["event"]["mode"] 
+        except KeyError:
+            name = self.data["battle"]["mode"]
         return " ".join(char.capitalize() for char in camel_to_snake(name).split("_"))
 
     @property
