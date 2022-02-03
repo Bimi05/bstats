@@ -8,8 +8,8 @@ with open("bstats/__init__.py") as file:
 with open("README.md") as file:
     readme = file.read()
 
-
 if version.endswith(("a", "b", "rc")):
+    version = version[:-1]
     try:
         import subprocess
 
@@ -20,11 +20,7 @@ if version.endswith(("a", "b", "rc")):
     except Exception:
         pass
 
-packages = [
-    "bstats"
-]
-    
-# set it up and install
+
 setup(
     name="bstats",
     version=version,
@@ -34,11 +30,11 @@ setup(
     project_urls={
         "Issues": "https://github.com/Bimi05/bstats/issues"
     },
-    packages=packages,
+    packages=["bstats"],
     description="A fundamental wrapper for the Brawl Stars API covering all endpoints and including many features!",
     long_description=readme,
     long_description_content_type="text/markdown",
-    python_requires=">=3.8.0",
+    python_requires=">=3.8",
     install_requires=["aiohttp>=3.7.0,<3.9", "cachetools>=4.1.0", "requests"],
     include_package_data=True,
     classifiers=[
@@ -46,6 +42,7 @@ setup(
         "Intended Audience :: Developers",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "License :: OSI Approved :: MIT License",
         "Topic :: Games/Entertainment :: Real Time Strategy",
         "Natural Language :: English,"
