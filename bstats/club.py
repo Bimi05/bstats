@@ -23,8 +23,9 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from typing import List
-from .member import ClubMember
+from .member import Member
 from .utils import camel_to_snake
+from .metadata.club import Club as ClubPayload
 
 class Club:
     """
@@ -52,53 +53,63 @@ class Club:
     """
     def __init__(self, data: dict):
         self.data = {camel_to_snake(key): value for key, value in data.items()}
+        self.patch_data(self.data)
 
     def __repr__(self):
-        return f"<Club name={self.data['name']!r} tag={self.data['tag']!r} members={len(self.data['members'])}>"
+        return f"<{self.__class__.__name__} name={self.name!r} tag={self.tag!r} members={len(self.members)}>"
 
     def __str__(self):
-        return f"{self.data['name']} ({self.data['tag']})"
+        return f"{self.name} ({self.tag})"
+
+    def patch_data(self, payload: ClubPayload):
+        self._name = payload["name"]
+        self._tag = payload["tag"]
+        self._description = payload["description"]
+        self._trophies = payload["trophies"]
+        self._required_trophies = payload["required_trophies"]
+        self._type = payload["type"]
+        self._badge_id = payload["badge_id"]
 
 
     @property
     def name(self) -> str:
         """`str`: The club's name."""
-        return self.data["name"]
+        return self._name
 
     @property
     def tag(self) -> str:
         """`str`: The club's tag."""
-        return self.data["tag"]
+        return self._tag
 
     @property
     def description(self) -> str:
         """`str`: The club's description."""
-        return self.data["description"]
+        return self._description
 
     @property
     def trophies(self) -> int:
         """`int`: The club's current total trophies."""
-        return self.data["trophies"]
+        return self._trophies
 
     @property
     def required_trophies(self) -> int:
         """`int`: The trophies that are required for a new member to join."""
-        return self.data["required_trophies"]
+        return self._required_trophies
 
     @property
-    def members(self) -> List[ClubMember]:
+    def members(self) -> List[Member]:
         """List[`~.ClubMember`]: A list consisting of `ClubMember` objects, representing the club's members."""
-        return [ClubMember(member) for member in self.data["members"]]
+        return [Member(member) for member in self.data["members"]]
 
     @property
     def type(self) -> str:
         """`str`: The club's type (i.e. "Open"/"Invite Only"/"Closed")."""
-        return self.data["type"].capitalize() if self.data["type"].lower() != "inviteonly" else "Invite Only"
+        return self._type.capitalize() if self._type.lower() != "inviteonly" else "Invite Only"
 
     @property
     def badge_id(self) -> int:
         """`int`: The club's badge ID."""
-        return self.data["badge_id"]
+        return self._badge_id
 
     @property
     def president(self):
