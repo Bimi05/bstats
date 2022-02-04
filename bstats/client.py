@@ -40,7 +40,7 @@ from .errors import InappropriateFormat, NoSuppliedToken
 from .profile import Profile
 from .club import Club
 from .brawler import Brawler
-from .member import ClubMember
+from .member import Member
 from .battlelog import BattlelogEntry
 from .leaderboard import LeaderboardEntry
 from .rotation import Rotation
@@ -269,14 +269,14 @@ class Client:
 
 
     @overload
-    def get_members(self, tag: str, *, use_cache: Literal[True]) -> List[ClubMember]:
+    def get_members(self, tag: str, *, use_cache: Literal[True]) -> List[Member]:
         ...
 
     @overload
-    def get_members(self, tag: str, *, use_cache: Literal[False]) -> List[ClubMember]:
+    def get_members(self, tag: str, *, use_cache: Literal[False]) -> List[Member]:
         ...
 
-    def get_members(self, tag: str, *, use_cache: bool = True) -> List[ClubMember]:
+    def get_members(self, tag: str, *, use_cache: bool = True) -> List[Member]:
         """
         Get a club's members
         - Note: Each member has some minimal attributes,
@@ -297,8 +297,8 @@ class Client:
             A list of `ClubMember` objects representing the club's members.
         """
         if self.use_async:
-            return self._aget_data(APIRoute(f"/clubs/{format_tag(tag)}/members"), ClubMember, use_cache=use_cache)
-        return self._get_data(APIRoute(f"/clubs/{format_tag(tag)}/members"), ClubMember, use_cache=use_cache)
+            return self._aget_data(APIRoute(f"/clubs/{format_tag(tag)}/members"), Member, use_cache=use_cache)
+        return self._get_data(APIRoute(f"/clubs/{format_tag(tag)}/members"), Member, use_cache=use_cache)
 
 
     @overload
