@@ -24,38 +24,34 @@ DEALINGS IN THE SOFTWARE.
 
 from .utils import camel_to_snake
 
-class ClubMember:
+class Member:
     """
     Represents a Brawl Stars club member.
 
-    Attributes
-    ----------
-
-    name: ``str``
+    ### Attributes
+    name: `str`
         The member's name.
-    tag: ``str``
-        The member's unique in-game tag.
-    color: ``str``
-        The hex code for the member's name colour.
-    colour: ``str``
-        An alias of ``ClubMember.color``.
-    role: ``str``
-        The member's role in the club (i.e. Member/Senior/Vice President/President)
-    trophies: ``int``
+    tag: `str`
+        The member's tag.
+    color: `str`
+        The hex code for the member's name color. An alias exists, `.colour`.
+    colour: `str`
+        The hex code for the member's name colour. An alias exists, `.color`.
+    role: `str`
+        The member's club role (i.e. "Member"/"Senior"/"Vice President"/"President")
+    trophies: `int`
         The member's current total trophies.
-    icon_id: ``int``
+    icon_id: `int`
         The member's icon ID.
     """
     def __init__(self, data: dict) -> None:
-        self.data = {}
-        for key in data:
-            self.data[camel_to_snake(key)] = data[key]
+        self.data = {camel_to_snake(key): value for key, value in data.items()}
 
     def __repr__(self) -> str:
-        return f"<ClubMember object name='{self.data['name']}' tag='{self.data['tag']}'>"
+        return f"<Member name={self.name!r} tag={self.tag!r} trophies={self.trophies} role={self.role}>"
 
     def __str__(self) -> str:
-        return f"{self.data['name']} ({self.data['tag']}): {self.role}"
+        return f"{self.name} ({self.tag}): {self.role}"
 
 
     @property
