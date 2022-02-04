@@ -31,6 +31,8 @@ from .brawler import Brawler
 from .http import APIRoute
 from .utils import camel_to_snake, format_tag
 
+from .metadata.profile import Profile as ProfilePayload
+
 class Profile:
     """
     Represents a Brawl Stars profile.
@@ -73,6 +75,7 @@ class Profile:
     def __init__(self, client, data: dict) -> None:
         self.client = client
         self.data = {camel_to_snake(key): value for key, value in data.items()}
+        self.patch_data(self.data)
 
     def __repr__(self) -> str:
         return f"<Player name={self.name!r} tag={self.tag!r} brawlers={len(self.brawlers)}>"
@@ -80,40 +83,52 @@ class Profile:
     def __str__(self) -> str:
         return f"{self.name} ({self.tag})"
 
+    def patch_data(self, payload: ProfilePayload):
+        self._name = payload["name"]
+        self._tag = payload["tag"]
+        self._trophies = payload["trophies"]
+        self._highest_trophies = payload["highest_trophies"]
+        self._is_cc_qualified = payload["is_qualified_from_championship_challenge"]
+        self._level = payload["level"]
+        self._exp = payload["exp_points"]
+        self._x3vs3_victories = payload["3vs3_victories"]
+        self._solo_victories = payload["solo_victories"]
+        self._duo_victories = payload["duo_victories"]
+
 
     @property
     def name(self) -> str:
         """`str`: The player's in-game name."""
-        return self.data["name"]
+        return self._name
 
     @property
     def tag(self) -> str:
         """`str`: The player's unique unique tag."""
-        return self.data["tag"]
+        return self._tag
 
     @property
     def trophies(self) -> int:
         """`int`: The player's current total amount of trophies."""
-        return self.data["trophies"]
+        return self._trophies
 
     @property
     def highest_trophies(self) -> int:
         """`int`: The player's highest total amount of trophies."""
-        return self.data["highest_trophies"]
+        return self._highest_trophies
 
     def is_cc_qualified(self) -> bool:
         """`bool`: Whether the player has qualified from the championship challenge (aka got 15 wins)."""
-        return self.data["is_qualified_from_championship_challenge"]
+        return self._is_cc_qualified
 
     @property
     def level(self) -> int:
         """`int`: The player's current experience level."""
-        return self.data["exp_level"]
+        return self._level
 
     @property
     def experience(self) -> int:
         """`int`: The player's lifetime gained experience points. An alias exists, `.exp`."""
-        return self.data["exp_points"]
+        return self._exp
 
     @property
     def exp(self) -> int:
@@ -123,7 +138,7 @@ class Profile:
     @property
     def x3vs3_victories(self) -> int:
         """`int`: The player's amount of 3vs3 victories. An alias exists, `.team_victories`."""
-        return self.data["3vs3_victories"]
+        return self._x3vs3_victories
 
     @property
     def team_victories(self) -> int:
@@ -133,12 +148,12 @@ class Profile:
     @property
     def solo_victories(self) -> int:
         """`int`: The player's amount of solo showdown victories."""
-        return self.data["solo_victories"]
+        return self._solo_victories
 
     @property
     def duo_victories(self) -> int:
         """`int`: The player's amount of duo showdown victories."""
-        return self.data["duo_victories"]
+        return self._duo_victories
 
     @property
     def club(self) -> Club:
