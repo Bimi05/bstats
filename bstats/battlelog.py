@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2022-present Bimi05
+Copyright (c) 2022-present Bimi
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -25,7 +25,14 @@ DEALINGS IN THE SOFTWARE.
 import datetime
 
 from .utils import camel_to_snake
-from typing import List, Tuple, Union
+from typing import (
+    Any,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    TypeVar
+)
 
 class EntryBrawler:
     """
@@ -42,33 +49,38 @@ class EntryBrawler:
     trophies: `int`
         The brawler's trophies at the time of the entry.
     """
-    def __init__(self, brawler: dict) -> None:
-        self.brawler = brawler
+    def __init__(self, brawler: Any) -> None:
+        self.push_data(brawler)
 
     def __repr__(self) -> str:
-        return f"<EntryBrawler name={self.brawler['name'].title()!r} id={self.brawler['id']}>"
+        return f"<{self.__class__.__name__} name={self.name!r} id={self.id} power={self.power} trophies={self.trophies}>"
+
+    def push_data(self, data: Any) -> None:
+        self._name: str = data["name"]
+        self._id: int = data["id"]
+        self._power: int = data["power"]
+        self._trophies: int = data["trophies"]
 
 
     @property
     def name(self) -> str:
         """`str`: The brawler's name."""
-        return self.brawler["name"].title()
+        return self._name.title()
 
     @property
     def id(self) -> int:
         """`int`: The brawler's ID."""
-        return self.brawler["id"]
+        return self._id
 
     @property
     def power(self) -> int:
         """`int`: The brawler's power level (1-11 exclusive)."""
-        return self.brawler["power"]
+        return self._power
 
     @property
     def trophies(self) -> int:
         """`int`: The brawler's trophies at the time of the entry."""
-        return self.brawler["trophies"]
-
+        return self._trophies
 
 class EntryPlayer:
     """
@@ -83,32 +95,38 @@ class EntryPlayer:
     brawler: `~.EntryBrawler`
         A `EntryBrawler` object representing the player's brawler.
     """
-    def __init__(self, player: dict) -> None:
-        self.player = player
+    def __init__(self, player: Any) -> None:
+        self.push_data(player)
 
     def __repr__(self) -> str:
-        return f"<EntryPlayer name={self.player['name']!r} tag={self.player['tag']!r}>"
+        return f"<{self.__class__.__name__} name={self.name!r} tag={self.tag!r} brawler={self.brawler}>"
 
     def __str__(self) -> str:
-        return f"{self.player['name']} ({self.player['tag']})"
+        return f"{self._name} ({self._tag})"
+
+    def push_data(self, data: Any) -> None:
+        self._name: str = data["name"]
+        self._tag: str = data["tag"]
+        self._brawler: Any = data["brawler"]
 
 
     @property
     def name(self) -> str:
         """`str`: The player's name."""
-        return self.player["name"]
+        return self._name
 
     @property
     def tag(self) -> str:
         """`str`: The player's tag."""
-        return self.player["tag"]
+        return self._tag
 
     @property
     def brawler(self) -> EntryBrawler:
         """`~.EntryBrawler`: A `EntryBrawler` object representing the player's brawler."""
-        return EntryBrawler(self.player["brawler"])
+        return EntryBrawler(self._brawler)
 
 
+BE = TypeVar("BE", bound="BattlelogEntry")
 class BattlelogEntry:
     """
     Represents a Brawl Stars battle log entry.
@@ -133,83 +151,76 @@ class BattlelogEntry:
     star_player: `~.EntryPlayer`
         The star player of the battle.
     """
-    def __init__(self, data: dict) -> None:
-        self.data = {}
-        for key in data:
-            self.data[camel_to_snake(key)] = data[key]
+    def __init__(self: BE, data: Any) -> None:
+        self.push_data({camel_to_snake(key): value for key, value in data.items()})
 
-    def __repr__(self) -> str:
-        return f"<BattlelogEntry object mode_name={self.name!r} result={self.result!r}>"
+    def __repr__(self: BE) -> str:
+        return f"<{self.__class__.__name__} name={self.name!r} result={self.result!r}>"
+
+    def push_data(self: BE, data: Any) -> None:
+        self._name: str = data["event"]["mode"] or data["battle"]["mode"]
+        self._id: int = data["event"]["id"]
+        self._map: Optional[str] = data["event"].get("map")
+        self._result: Union[int, str] = data["battle"]["result"] or data["battle"]["rank"]
+        self._time: str = data["battle_time"]
+        self._duration: int = data["battle"]["duration"]
+        self._trophy_change: int = data["battle"]["trophyChange"]
+        self._players: Union[List[List[Any]], List[Any]] = data["battle"]["teams"] or data["battle"]["players"]
+        self._star_player: Any = data["battle"]["starPlayer"]
 
 
     @property
-    def name(self) -> str:
+    def name(self: BE) -> str:
         """`str`: The mode's name."""
-        try:
-            name = self.data["event"]["mode"] 
-        except KeyError:
-            name = self.data["battle"]["mode"]
-        return " ".join(char.capitalize() for char in camel_to_snake(name).split("_"))
+        name = " ".join([word.capitalize() for word in camel_to_snake(self._name).split("_")])
+        return name
 
     @property
-    def id(self) -> int:
+    def id(self: BE) -> int:
         """`int`: The mode's ID."""
-        return self.data["event"]["id"]
+        return self._id
 
     @property
-    def map(self) -> str:
+    def map(self: BE) -> str:
         """`str`: The mode's map. If `None`, return "Community Map"."""
-        m = self.data["event"]["map"]
-        if m:
-            return m
+        if self._map:
+            return self._map
         return "Community Map"
 
     @property
-    def result(self) -> str:
+    def result(self: BE) -> str:
         """`str`: The result of the battle (Defeat/Draw/Victory in case of 3v3, the rank in case of showdown)."""
-        try:
-            return self.data["battle"]["result"].capitalize()
-        except KeyError:
-            return f"Rank {self.data['battle']['rank']}"
+        if type(self._result) is int:
+            return f"Rank {self._result}"
+        return self._result.capitalize()
 
     @property
-    def time(self) -> str:
+    def time(self: BE) -> datetime.datetime:
         """`str`: The time at which the entry was recorded."""
-        return datetime.datetime.strptime(self.data["battle_time"], "%Y%m%dT%H%M%S.%fZ").strftime("%d/%m/%Y - %H:%M:%S")
+        return datetime.datetime.strptime(self._time, "%Y%m%dT%H%M%S.%fZ")
 
     @property
-    def duration(self) -> Tuple[int, int]:
+    def duration(self: BE) -> Tuple[int, int]:
         """Tuple[`int`, `int`]: How long the battle lasted."""
-        return divmod(self.data["battle"]["duration"], 60)
+        return divmod(self._duration, 60)
 
     @property
-    def trophy_change(self) -> int:
+    def trophy_change(self: BE) -> int:
         """`int`: The amount of trophies the player gained or lost from the battle."""
-        try:
-            return self.data["battle"]["trophy_change"]
-        except KeyError: # the API returns camelCased keys; catch the issue in case it's not converted to snake_case
-            return self.data["battle"]["trophyChange"]
+        return self._trophy_change
 
     @property
-    def players(self) -> List[EntryPlayer]:
+    def players(self: BE) -> List[EntryPlayer]:
         """List[`~.EntryPlayer`]: The players that took part in the battle."""
         try:
-            players = self.data["battle"]["teams"]
-        except KeyError: # only gets raised if mode is solo showdown
-            players = self.data["battle"]["players"]
-
-        if isinstance(players[0], list): # nested list meaning that the mode is anything but solo showdown
-            players = [EntryPlayer(player) for player in players[0]]
-            for player in players[1]:
-                players.append(EntryPlayer(player))
-            return players
+            getattr(self._players[0], "append")
+        except AttributeError:
+            return [EntryPlayer(player) for player in self._players]
         else:
-            return [EntryPlayer(player) for player in players]
+            from functools import reduce
+            return reduce(lambda x, y: x + y, self._players)
 
     @property
-    def star_player(self) -> EntryPlayer:
+    def star_player(self: BE) -> EntryPlayer:
         """`~.EntryPlayer`: The star player of the battle."""
-        try:
-            return EntryPlayer(self.data["battle"]["star_player"])
-        except KeyError: # the API returns camelCased keys; catch the issue in case it's not converted to snake_case
-            return EntryPlayer(self.data["battle"]["starPlayer"])
+        return EntryPlayer(self._star_player)

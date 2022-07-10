@@ -16,7 +16,7 @@ body:
     attributes:
       label: Re-production
       description: >
-         The process of re-producing the bug
+          The process of re-producing the bug
     validations:
       required: true
   - type: textarea

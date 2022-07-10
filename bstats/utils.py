@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2022-present Bimi05
+Copyright (c) 2022-present Bimi
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -25,7 +25,6 @@ DEALINGS IN THE SOFTWARE.
 import re
 
 from urllib.parse import quote
-
 from .errors import InvalidSuppliedTag
 
 
@@ -67,7 +66,7 @@ def format_tag(tag: str) -> str:
     if len(tag) < 3:
         raise InvalidSuppliedTag("Could not format tag, tag less than 3 characters.")
 
-    invalid = tuple(dict.fromkeys([c for c in tag if c not in "0289PYLQGRJCUV"]))
+    invalid = tuple(dict.fromkeys([c for c in tag if c not in set("0289PYLQGRJCUV")]))
     if invalid:
         raise InvalidSuppliedTag("A tag with invalid characters has been supplied.\nInvalid character(s): {}".format(", ".join(invalid)))
     return quote(f"#{tag}")
@@ -94,7 +93,7 @@ def calculate_exp(exp_points: int, /) -> str:
     try: 
         exp_points = int(exp_points)
     except ValueError:
-        raise TypeError(f"'exp_points' must be convertible to int; {exp_points.__class__.__name__!r} cannot be converted.")
+        raise TypeError(f"'exp_points' must be int or convertible to int; got {exp_points.__class__.__name__!r} instead.")
 
     required, total = 30, exp_points
     while total >= 0:

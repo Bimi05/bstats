@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2022-present Bimi05
+Copyright (c) 2022-present Bimi
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -22,19 +22,13 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-import os
-import re
-import sys
-import logging
 import asyncio
 import aiohttp
-import requests
+import re
+import os
+import sys
 
-from cachetools import TTLCache
-from typing import List, Literal, TypeVar, Union, overload
-
-from .utils import format_tag
-from .http import APIRoute, HTTPClient
+from .http import HTTPClient
 from .errors import InappropriateFormat, NoSuppliedToken
 
 from .profile import Profile
@@ -42,79 +36,60 @@ from .club import Club
 from .brawler import Brawler
 from .member import Member
 from .battlelog import BattlelogEntry
-from .leaderboard import LeaderboardEntry
-from .rotation import Rotation
+from .leaderboard import LeaderboardPlayerEntry, LeaderboardClubEntry
+from .rotation import EventSlot
 
-T = TypeVar("T")
-_log = logging.getLogger(__name__)
+from typing import (
+    List,
+    TypeVar,
+    Union,
+    overload
+)
 
+C = TypeVar("C", bound="Client")
 class Client:
     """
     ## You have to make an account before you can create an API token!
-    Sync/Async Client to access the Brawl Stars API.
+    Asynchronous Client to access the Brawl Stars API.
     
     ### Parameters
     token: `str`
         The API token from the [API website](https://developer.brawlstars.com/) to make requests with.
-        If the token is invalid, then you will receive an exception (`~.errors.Forbidden`).
-    asynchronous (optional, defaults to `False`): `bool`
-        Whether the client should be asynchronous.
+        If the token is invalid, then you will receive an exception (`errors.Forbidden`).
     timeout (optional, defaults to `45`): `int`
         How long to wait before terminating requests.
     """
-    def __init__(self, token: str, *, asynchronous: bool = False, timeout: int = 45) -> None:
+    def __init__(self: C, token: str, *, timeout: int = 45) -> None:
         with open(os.path.join(os.path.dirname(__file__), "__init__.py")) as file:
             self.VERSION = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", file.read(), re.MULTILINE).group(1)
 
+        if not token:
+            raise NoSuppliedToken("You must supply a token to access the API.")
+
+        self.token = token
         try:
             timeout = int(timeout)
         except ValueError:
-            raise TypeError(f"'timeout' must be convertible to int; {timeout.__class__.__name__!r} cannot be converted.")
+            raise TypeError(f"timeout type {timeout.__class__.__name__!r} cannot be converted to int.")
         else:
             self.timeout = timeout
 
-        self.use_async = asynchronous
-
-        if not token:
-            raise NoSuppliedToken("You have to supply a token to access the API.")
-
-        self.token = token
         self.headers = {
             "Authorization": "Bearer {}".format(self.token),
-            "User-Agent": "BStats/{0} (Python {1[0]}.{1[1]}, Aiohttp {2})"\
-                .format(self.VERSION, sys.version_info, aiohttp.__version__)
+            "User-Agent": "BStats/{v} (Python {pv[0]}.{pv[1]}, Aiohttp {av})"\
+                .format(v=self.VERSION, pv=sys.version_info, av=aiohttp.__version__)
         }
 
-        self.session = aiohttp.ClientSession(loop=self._make_loop()) if self.use_async else requests.Session()
-        self.cache = TTLCache(3200 * 5, 60 * 5)
-        self.http_client = HTTPClient(self.timeout, self.headers, self.cache)
+        self.session = aiohttp.ClientSession(loop=self._make_loop())
+        self.http = HTTPClient(self.session, headers=self.headers, timeout=self.timeout)
 
-    async def __ainit__(self) -> None:
+    async def __ainit__(self: C) -> None:
         self.BRAWLERS = {brawler.name: brawler.id for brawler in await self.get_brawlers()}
 
-    def __repr__(self) -> str:
-        return f"<{self.__class__.__name__} asynchronous={self.use_async} timeout={self.timeout}>"
+    def __repr__(self: C) -> str:
+        return f"<{self.__class__.__name__} timeout={self.timeout}>"
 
-    def __enter__(self):
-        if not self.use_async:
-            return self
-        raise TypeError(f"Use 'async with {self.__class__.__name__} as ...:' instead")
-
-    def __exit__(self, exc_type, exc, tb):
-        # if the client is async, this never gets called because __enter__ raises an exception
-        if self.session:
-            self.session.close()
-
-    async def __aenter__(self):
-        if self.use_async:
-            return self
-        raise TypeError(f"Use 'with {self.__class__.__name__} as ...:' instead")
-
-    async def __aexit__(self, exc_type, exc, tb):
-        if not self.session.closed:
-            await self.session.close()
-
-    def _make_loop(self):
+    def _make_loop(self: C) -> asyncio.AbstractEventLoop:
         if sys.version_info >= (3, 10):
             try:
                 loop = asyncio.get_running_loop()
@@ -126,73 +101,7 @@ class Client:
         return loop
 
 
-    def _get_data(
-        self, 
-        route: APIRoute, 
-        model: T, 
-        *, 
-        use_cache: bool = True
-    ) -> Union[T, List[T]]:
-        """
-        Request the necessary data with the given URL
-        and return the model supplied containing the data.
-        Depending on what model is requested, there is:
-        - either the model itself is returned.
-        - or a list full of the model is returned.
-        """
-        data = self._make_loop().run_until_complete(self.http_client.request(route.url, use_cache=use_cache))
-
-        try:
-            return [model(item) for item in data["items"]]
-        except KeyError:
-            # this gets raised if the items key is not present.
-            # if it's a list (battlelog entries, club members, ...)
-            # then it is a dict with the keys "items" and "paging".
-            # Otherwise, it's just the plain dict response with the data
-            # which in any case, is what we need
-            try:
-                return model(data)
-            except TypeError:
-                return model(self, data) # Profile takes two arguments
-
-    async def _aget_data(
-        self, 
-        route: APIRoute, 
-        model: T, 
-        *, 
-        use_cache: bool = True
-    ) -> Union[T, List[T]]:
-        """
-        Request the necessary data with the given URL
-        and return the model supplied containing the data.
-        Depending on what model is requested, there is:
-        - either the model itself is returned.
-        - or a list full of the model is returned.
-        """
-        data = await self.http_client.request(route.url, use_cache=use_cache)
-        try:
-            return [model(item) for item in data["items"]]
-        except KeyError:
-            # this gets raised if the items key is not present.
-            # if it's a list (battlelog entries, club members, ...)
-            # then it is a dict with the keys "items" and "paging".
-            # Otherwise, it's just the plain dict response with the data
-            # which in any case, is what we need
-            try:
-                return model(data)
-            except TypeError:
-                return model(self, data) # Profile takes two arguments
-
-
-    @overload
-    def get_player(self, tag: str, *, use_cache: Literal[True]) -> Profile:
-        ...
-
-    @overload
-    def get_player(self, tag: str, *, use_cache: Literal[False]) -> Profile:
-        ...
-
-    def get_player(self, tag: str, *, use_cache: bool = True) -> Profile:
+    async def get_player(self: C, tag: str, /) -> Profile:
         """
         Get a player's profile and their statistics.
 
@@ -200,28 +109,17 @@ class Client:
         tag: `str`
             The player's tag to use for the request.
             If a character other than `0289PYLQGRJCUV` is in the tag,
-            then `~.InvalidSuppliedTag` is raised.
-        use_cache (optional, defaults to `True`): `bool`
-            Whether to use the internal 5-minute cache.
+            then `errors.InvalidSuppliedTag` is raised.
 
         ### Returns
         `~.Profile`
             A `Profile` object representing the player's profile.
         """
-        if self.use_async:
-            return self._aget_data(APIRoute(f"/players/{format_tag(tag)}"), Profile, use_cache=use_cache)
-        return self._get_data(APIRoute(f"/players/{format_tag(tag)}"), Profile, use_cache=use_cache)
+        data = await self.http._get_player(tag)
+        return Profile(data)
 
 
-    @overload
-    def get_club(self, tag: str, *, use_cache: Literal[True]) -> Club:
-        ...
-
-    @overload
-    def get_club(self, tag: str, *, use_cache: Literal[False]) -> Club:
-        ...
-
-    def get_club(self, tag: str, *, use_cache: bool = True) -> Club:
+    async def get_club(self: C, tag: str, /) -> Club:
         """
         Get a club and its statistics.
         
@@ -229,87 +127,53 @@ class Client:
         tag: `str`
             The club's tag to use for the request.
             If a character other than `0289PYLQGRJCUV` is in the tag,
-            then `~.errors.InvalidSuppliedTag` is raised.
-        use_cache (optional, defaults to `True`): `bool`
-            Whether to use the internal 5-minute cache.
+            then `errors.InvalidSuppliedTag` is raised.
 
         ### Returns
         `~.Club`
             A `Club` object representing the club.
         """
-        if self.use_async:
-            return self._aget_data(APIRoute(f"/clubs/{format_tag(tag)}"), Club, use_cache=use_cache)
-        return self._get_data(APIRoute(f"/clubs/{format_tag(tag)}"), Club, use_cache=use_cache)
+        data = await self.http._get_club(tag)
+        return Club(data)
 
 
-    @overload
-    def get_brawlers(self, *, use_cache: Literal[True]) -> List[Brawler]:
-        ...
-
-    @overload
-    def get_brawlers(self, *, use_cache: Literal[False]) -> List[Brawler]:
-        ...
-
-    def get_brawlers(self, *, use_cache: bool = True) -> List[Brawler]:
+    async def get_brawlers(self: C) -> List[Brawler]:
         """
         Get all the available brawlers and their details.
         - These are not the brawlers a player has!
 
-        ### Parameters
-        use_cache (optional, defaults to `True`): `bool`
-            Whether to use the internal 5-minute cache.
-
         ### Returns
-        List[`~.Brawler`]
+        List[`Brawler`]
             A list of `Brawler` objects representing the available in-game brawlers.
         """
-        if self.use_async:
-            return self._aget_data(APIRoute("/brawlers"), Brawler, use_cache=use_cache)
-        return self._get_data(APIRoute("/brawlers"), Brawler, use_cache=use_cache)
+
+        data = await self.http._get_brawlers()
+        return [Brawler(brawler) for brawler in data["items"]]
 
 
-    @overload
-    def get_members(self, tag: str, *, use_cache: Literal[True]) -> List[Member]:
-        ...
-
-    @overload
-    def get_members(self, tag: str, *, use_cache: Literal[False]) -> List[Member]:
-        ...
-
-    def get_members(self, tag: str, *, use_cache: bool = True) -> List[Member]:
+    async def get_members(self: C, tag: str, /) -> List[Member]:
         """
         Get a club's members
         - Note: Each member has some minimal attributes,
         specifically what is viewable in the club tab in-game.
-        To get a `Player` object of that member, use `~.get_player()`
+        To get a `Player` object of that member, use `.get_player()`
         with the member's tag.
 
         ### Parameters
         tag: `str`
             The club's tag to use for the request.
             If a character other than `0289PYLQGRJCUV` is in the tag,
-            then `~.InvalidSuppliedTag` is raised.
-        use_cache (optional, defaults to `True`): `bool`
-            Whether to use the internal 5-minute cache.
+            then `errors.InvalidSuppliedTag` is raised.
 
         ### Returns
-        List[`~.ClubMember`]
-            A list of `ClubMember` objects representing the club's members.
+        List[`Member`]
+            A list of `Member` objects representing the club's members.
         """
-        if self.use_async:
-            return self._aget_data(APIRoute(f"/clubs/{format_tag(tag)}/members"), Member, use_cache=use_cache)
-        return self._get_data(APIRoute(f"/clubs/{format_tag(tag)}/members"), Member, use_cache=use_cache)
+        data = await self.http._get_members(tag)
+        return [Member(member) for member in data["items"]]
 
 
-    @overload
-    def get_battlelogs(self, tag: str, *, use_cache: Literal[True]) -> List[BattlelogEntry]:
-        ...
-
-    @overload
-    def get_battlelogs(self, tag: str, *, use_cache: Literal[False]) -> List[BattlelogEntry]:
-        ...
-
-    def get_battlelogs(self, tag: str, *, use_cache: bool = True) -> List[BattlelogEntry]:
+    async def get_battlelogs(self: C, tag: str, /) -> List[BattlelogEntry]:
         """
         Get a player's battlelogs
 
@@ -317,32 +181,29 @@ class Client:
         tag: `str`
             The player's tag to use for the request.
             If a character other than `0289PYLQGRJCUV` is in the tag,
-            then `~.errors.InvalidSuppliedTag` is raised.
-        use_cache (optional, defaults to `True`): `bool`
-            Whether to use the internal 5-minute cache.
+            then `errors.InvalidSuppliedTag` is raised.
 
         ### Returns
-        List[`~.BattlelogEntry`]
+        List[`BattlelogEntry`]
             A list of `BattlelogEntry` objects representing the player's battlelog entries
         """
-        if self.use_async:
-            return self._aget_data(APIRoute(f"/players/{format_tag(tag)}/battlelog"), BattlelogEntry, use_cache=use_cache)
-        return self._get_data(APIRoute(f"/players/{format_tag(tag)}/battlelog"), BattlelogEntry, use_cache=use_cache)
+        data = await self.http._get_battlelogs(tag)
+        return [BattlelogEntry(entry) for entry in data["items"]]
 
 
     @overload
-    def get_leaderboards(self, mode="players", **options) -> List[LeaderboardEntry]:
+    async def get_leaderboards(self: C, mode: str = "players", **options) -> List[LeaderboardPlayerEntry]:
         ...
 
     @overload
-    def get_leaderboards(self, mode="clubs", **options) -> List[LeaderboardEntry]:
+    async def get_leaderboards(self: C, mode: str = "clubs", **options) -> List[LeaderboardClubEntry]:
         ...
 
     @overload
-    def get_leaderboards(self, mode="brawlers", **options) -> List[LeaderboardEntry]:
+    async def get_leaderboards(self: C, mode: str = "brawlers", **options) -> List[LeaderboardPlayerEntry]:
         ...
 
-    def get_leaderboards(self, mode: Literal["players", "clubs", "brawlers"], **options) -> List[LeaderboardEntry]:
+    async def get_leaderboards(self: C, mode: str, **options) -> Union[List[LeaderboardPlayerEntry], List[LeaderboardClubEntry]]:
         """
         Get in-game leaderboard rankings for players, clubs or brawlers.
 
@@ -356,37 +217,35 @@ class Client:
             Must be from 1-200, inclusive.
         brawler (optional, defaults to `None`): Union[`int`, `str`]
             The brawler's name or ID to use. This only takes effect when the mode is set to "brawlers".
-        use_cache (optional, defaults to `True`): `bool`
-            Whether to use the internal 5-minute cache.
 
         ### Returns
-        List[`~.LeaderboardEntry`]
-            A list of `LeaderboardEntry` objects representing the leaderboard rankings.
+        List[`LeaderboardPlayerEntry`] | List[`LeaderboardClubEntry`]
+            A list of `LeaderboardPlayerEntry` or `LeaderboardClubEntry` objects.
+            - `LeaderboardPlayerEntry` objects are returned when the leaderboard mode is set to "players" or "brawlers".
+            - `LeaderboardClubEntry` objects are return when the leaderboard mode is set to "clubs".
 
         ### Raises
-        `~.InappropriateFormat`
+        `InappropriateFormat`
         - The mode provided isn't "players", "clubs" or "brawlers".
         - The brawler supplied is not an integer or a string.
         - The brawler supplied isn't valid.
         - The mode is set to "brawlers" but no brawler was supplied.
-        - The given limit is not an integer or convertible to an integer.
+        - The given limit is not an integer and is not convertible to an integer.
         - The given limit is not between 1 and 200.
         """
 
-        # get and format all possible attributes
         mode = mode.lower()
-        region = options.get("region", "global").lower()
-        limit = options.get("limit", 200)
+        region = options.pop("region", "global").lower()
+        limit = options.pop("limit", 200)
         try:
             limit = int(limit)
         except ValueError:
-            raise InappropriateFormat(f"'limit' must be convertible to int; {limit.__class__.__name__!r} cannot be converted.")
-        brawler = options.get("brawler")
-        use_cache = bool(options.get("use_cache", True))
+            raise InappropriateFormat(f"'limit' must be int or convertible to int,  {limit.__class__.__name__!r}.")
+        brawler = options.pop("brawler", None)
+        if brawler:
+            brawler = brawler.title()
 
         # check if every aspect is OK so we can proper request
-        if mode not in {"players", "clubs", "brawlers"}:
-            raise InappropriateFormat(f"'mode' cannot be of choice {mode!r}. The acceptable choices are players/clubs/brawlers")
         if not 0 < limit <= 200:
             raise InappropriateFormat(f"{limit} is not a valid limit choice. You must choose between 1-200.")
         if region != "global" and len(region) > 2:
@@ -397,9 +256,9 @@ class Client:
                     brawler = int(brawler)
                 except ValueError:
                     try:
-                        brawler = self.BRAWLERS[brawler.title()]
+                        brawler = self.BRAWLERS[brawler]
                     except KeyError:
-                        raise InappropriateFormat(f"{brawler.title()!r} is not a valid brawler.")
+                        raise InappropriateFormat(f"{brawler!r} is not a valid brawler.")
                 else:
                     if brawler not in self.BRAWLERS.values():
                         raise InappropriateFormat(f"Brawler with ID {brawler!r} is not a valid brawler.")
@@ -409,38 +268,28 @@ class Client:
             if mode == "brawlers":
                 raise InappropriateFormat("You must supply a brawler name or ID if you want to get the 'brawlers' leaderboard rankings.")
 
-        url = "/rankings/{}/{}"
-        if mode == "brawlers":
-            url += "/{}"
-        if limit < 200:
-            url += "?limit={}"
+        m = {
+            "players": LeaderboardPlayerEntry,
+            "clubs": LeaderboardClubEntry,
+            "brawlers": LeaderboardPlayerEntry
+        }
 
-        if self.use_async:
-            return self._aget_data(APIRoute(url.format(region, mode, brawler, limit)), LeaderboardEntry, use_cache=use_cache)
-        return self._get_data(APIRoute(url.format(region, mode, brawler, limit)), LeaderboardEntry, use_cache=use_cache)
+        try:
+            return_type = m[mode]
+        except KeyError:
+            raise InappropriateFormat(f"'mode' must either be 'players', 'clubs' or 'brawlers', not {mode!r}.")
+        else:
+            data = await self.http._get_leaderboards(mode, region, limit, brawler)
+            return [return_type(entry) for entry in data["items"]]
 
 
-    @overload
-    def get_event_rotation(self, *, use_cache: Literal[True]) -> List[Rotation]:
-        ...
-
-    @overload
-    def get_event_rotation(self, *, use_cache: Literal[False]) -> List[Rotation]:
-        ...
-
-    def get_event_rotation(self, *, use_cache: bool = True) -> List[Rotation]:
+    async def get_event_rotation(self) -> List[EventSlot]:
         """
         Get the current in-game event rotation.
 
-        ### Parameters
-        use_cache: `bool`, optional
-            Whether to use the internal 5-minute cache. By default, ``True``.
-
         ### Returns
-        List[`~.Rotation`]
+        List[`Rotation`]
             A list of `Rotation` objects representing the current event rotation.
         """
-        if self.use_async:
-            return self._aget_data(APIRoute("/events/rotation"), Rotation, use_cache=use_cache)
-        return self._get_data(APIRoute("/events/rotation"), Rotation, use_cache=use_cache)
-
+        data = await self.http._get_event_rotation()
+        return [EventSlot(event) for event in data]

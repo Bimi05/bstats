@@ -1,6 +1,18 @@
 # BStats changelog
 All notable contributions and changes to the project will be documented here.
 
+### 1.1.0 - 10th Jul 2022
+#### Added
+- `ends_in` property to `EventSlot`.
+
+#### Updated
+- `AsyncClient` was renamed to `Client` and is the only supported client (asynchronous).
+- `Event` was renamed to `EventDetails` and `Rotation` was renamed to `EventSlot`.
+
+#### Removed
+- `use_cache` parameter, cache usage is now defaulted (for easier access, without excessive API request spam).
+- `SyncClient` has been removed. 
+
 ### 1.0.6 - 10th Jan 2022
 #### Updated
 - Replaced `self.client.session` with `requests.Session()` in the `club` attribute of the `Profile` object to eliminate possible errors.

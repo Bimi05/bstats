@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2022-present Bimi05
+Copyright (c) 2022-present Bimi
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -23,82 +23,97 @@ DEALINGS IN THE SOFTWARE.
 """
 
 import datetime
-
 from .utils import camel_to_snake
 
+from typing import (
+    TypeVar,
+    Any
+)
 
-class Event:
+class EventDetails:
     """
-    Represents a Brawl Stars event slot.
+    Represents a Brawl Stars event slot details.
 
-    Attributes
-    ----------
-
-    mode: ``str``
-        The event's mode name.
-    map: ``str``
-        The event's mode map.
-    id: ``int``
-        The event's map ID.
+    ### Attributes
+    mode: `str`
+        The event slot's mode name.
+    map: `str`
+        The event slot's mode map.
+    id: `int`
+        The event slot's map ID.
     """
-    def __init__(self, event: dict) -> None:
-        self.event = event
+    def __init__(self, event: Any) -> None:
+        self.push_data(event)
 
     def __repr__(self) -> str:
-        return f"<Event object mode='{self.mode}' map='{self.map}'>"
+        return f"<Event object mode={self.mode!r} map={self.map!r}>"
+
+    def push_data(self, data: Any) -> None:
+        self._mode = data["mode"]
+        self._map = data["map"]
+        self._id = data["id"]
 
 
     @property
     def mode(self) -> str:
-        """``str``: The event's mode name."""
-        return " ".join(char.capitalize() for char in camel_to_snake(self.event["mode"]).split("_"))
+        """`str`: The event's mode name."""
+        f = " ".join(camel_to_snake(self._mode).split("_"))
+        return f.title()
 
     @property
     def map(self) -> str:
-        """``str``: The event's mode map."""
-        return self.event["map"]
+        """`str`: The event's mode map."""
+        return self._map
 
     @property
     def id(self) -> int:
-        """``int``: The event's map ID."""
-        return self.event["id"]
+        """`int`: The event's map ID."""
+        return self._id
 
-class Rotation:
+
+ES = TypeVar("ES", bound="EventSlot")
+class EventSlot:
     """
-    Represents a Brawl Stars event rotation.
+    Represents a Brawl Stars event slot.
 
-    Attributes
-    ----------
-
-    start: ``str``
+    ### Attributes
+    start: `datetime.datetime`
         The time that the event came into rotation.
-        Follows this format: DD/MM/YY - HH:MM:SS
-    end: ``str``
+    end: `datetime.datetime`
         The time that the event will come out of rotation.
-        Follows this format: DD/MM/YY - HH:MM:SS
-    event: ``Event``
-        An ``Event`` object representing the event's details.
+    ends_in: `int`
+        The amount of seconds left before the event comes out of rotation.
+    event: `EventDetails`
+        An `EventDetails` object representing the event's details.
     """
-    def __init__(self, rotation: dict) -> None:
-        self.rotation = {}
-        for key in rotation:
-            self.rotation[camel_to_snake(key)] = rotation[key]
+    def __init__(self: ES, rotation: Any) -> None:
+        self.push_data({camel_to_snake(key): value for key, value in rotation.items()})
 
-    def __repr__(self) -> str:
-        return f"<Rotation object event_mode='{self.event.mode}' event_map='{self.event.map}'>"
+    def __repr__(self: ES) -> str:
+        return f"<{self.__class__.__name__} mode={self.event.mode!r} map={self.event.map!r}>"
 
+    def push_data(self: ES, data: Any) -> None:
+        self._start = data["start_time"]
+        self._end = data["end_time"]
+        self._event = data["event"]
 
-    @property
-    def start(self) -> str:
-        """``str``: The time that the event came into rotation. Follows this format: DD/MM/YY - HH:MM:SS"""
-        return datetime.datetime.strptime(self.rotation["start_time"], "%Y%m%dT%H%M%S.%fZ").strftime("%d/%m/%Y - %H:%M:%S")
 
     @property
-    def end(self) -> str:
-        """``str``: The time that the event will come out of rotation. Follows this format: DD/MM/YY - HH:MM:SS"""
-        return datetime.datetime.strptime(self.rotation["end_time"], "%Y%m%dT%H%M%S.%fZ").strftime("%d/%m/%Y - %H:%M:%S")
+    def start(self: ES) -> datetime.datetime:
+        """`datetime.datetime`: The time that the event came into rotation."""
+        return datetime.datetime.strptime(self._start, "%Y%m%dT%H%M%S.%fZ")
 
     @property
-    def event(self) -> Event:
-        """``Event``: An ``Event`` object representing the event's details."""
-        return Event(self.rotation["event"])
+    def end(self: ES) -> datetime.datetime:
+        """`datetime.datetime`: The time that the event will come out of rotation."""
+        return datetime.datetime.strptime(self._end, "%Y%m%dT%H%M%S.%fZ")
+
+    @property
+    def ends_in(self: ES) -> int:
+        """`int`: The amount of seconds left before the event comes out of rotation."""
+        return int((self.end - datetime.datetime.utcnow()).total_seconds())
+
+    @property
+    def event(self: ES) -> EventDetails:
+        """`EventDetails`: An `EventDetails` object representing the event's details."""
+        return EventDetails(self._event)

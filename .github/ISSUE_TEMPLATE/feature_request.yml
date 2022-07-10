@@ -11,7 +11,7 @@ body:
     attributes:
       label: The Problem it solves
       description: >
-         The problem that this feature fixes, if any.
+          The problem that this feature fixes, if any.
   - type: textarea
     attributes:
       label: The Solution

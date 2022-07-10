@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2022-present Bimi05
+Copyright (c) 2022-present Bimi
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -24,6 +24,12 @@ DEALINGS IN THE SOFTWARE.
 
 from .utils import camel_to_snake
 
+from typing import (
+    Any,
+    TypeVar
+)
+
+M = TypeVar("M", bound="Member")
 class Member:
     """
     Represents a Brawl Stars club member.
@@ -44,48 +50,58 @@ class Member:
     icon_id: `int`
         The member's icon ID.
     """
-    def __init__(self, data: dict) -> None:
-        self.data = {camel_to_snake(key): value for key, value in data.items()}
+    def __init__(self: M, member: Any) -> None:
+        self.push_data({camel_to_snake(key): value for key, value in member.items()})
 
-    def __repr__(self) -> str:
+    def __repr__(self: M) -> str:
         return f"<Member name={self.name!r} tag={self.tag!r} trophies={self.trophies} role={self.role}>"
 
-    def __str__(self) -> str:
+    def __str__(self: M) -> str:
         return f"{self.name} ({self.tag}): {self.role}"
 
+    def push_data(self: M, data: Any) -> None:
+        self._name: str = data["name"]
+        self._tag: str = data["tag"]
+        self._colour: str = data["name_color"]
+        self._role: str = data["role"]
+        self._trophies: int = data["trophies"]
+        self._icon_id: int = data["icon"]["id"]
+
 
     @property
-    def name(self) -> str:
-        """``str``: The member's name."""
-        return self.data["name"]
+    def name(self: M) -> str:
+        """`str`: The member's name."""
+        return self._name
 
     @property
-    def tag(self) -> str:
-        """``str``: The member's unique in-game tag."""
-        return self.data["tag"]
+    def tag(self: M) -> str:
+        """`str`: The member's unique in-game tag."""
+        return self._tag
 
     @property
-    def color(self) -> str:
-        """``str``: The hex code for the member's name colour."""
-        return self.data["name_color"]
+    def color(self: M) -> str:
+        """`str`: The hex code for the member's name colour (#XXXXXX)."""
+        return f"#{self._colour[4:]}"
 
     @property
-    def colour(self) -> str:
-        """``str``: An alias of ``ClubMember.color``."""
-        return self.color
+    def colour(self: M) -> str:
+        """`str`: An alias of `.color`."""
+        return self._color
 
     @property
-    def role(self) -> str:
-        """``str``: The member's role in the club (i.e. Member/Senior/Vice President/President)"""
-        return self.data["role"].title() if self.data["role"].lower() != "vicepresident" else "Vice President"
+    def role(self: M) -> str:
+        """`str`: The member's role in the club (i.e. Member/Senior/Vice President/President)"""
+        if self._role.lower() != "vicepresident":
+            return self._role.title()
+        return "Vice President"
 
     @property
-    def trophies(self) -> int:
-        """``int``: The member's current total trophies."""
-        return self.data["trophies"]
+    def trophies(self: M) -> int:
+        """`int`: The member's current total trophies."""
+        return self._trophies
 
     @property
-    def icon_id(self) -> int:
-        """``int``: The member's icon ID."""
-        return self.data["icon"]["id"]
+    def icon_id(self: M) -> int:
+        """`int`: The member's icon ID."""
+        return self._icon_id
 

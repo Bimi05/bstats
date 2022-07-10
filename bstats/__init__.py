@@ -4,21 +4,19 @@
 A basic Brawl Stars API wrapper,
 covering all endpoints with many features!
 
-Copyright (c) 2022-present Bimi05
+Copyright (c) 2022-present Bimi
 """
 
 __title__ = "bstats"
-__author__ = "Bimi05"
+__author__ = "Bimi"
 __license__ = "MIT"
 __version__ = "1.1.0a"
 
-import logging
 from typing import NamedTuple
 
+from . import utils
 from .client import Client
 from .errors import *
-
-from . import utils
 from .profile import *
 from .club import *
 from .brawler import *
@@ -35,7 +33,12 @@ class VerInfo(NamedTuple):
     level: str
     serial: int
 
-major, minor, micro = (int(num) for num in __version__[:-1].split("."))
-version_info = VerInfo(major, minor, micro, level="alpha", serial=0)
+try:
+    major, minor, micro = (int(num) for num in __version__.split("."))
+    rlevel = "final"
+except ValueError: # alpha/beta releases cover
+    major, minor, micro = (int(num) for num in __version__[:-1].split("."))
+    levels = {"a": "alpha", "b": "beta", "rc": "candidate release"}
+    rlevel = levels[__version__[-1]]
 
-logging.getLogger(__name__).addHandler(logging.NullHandler())
+version_info = VerInfo(major, minor, micro, level=rlevel, serial=0)

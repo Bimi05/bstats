@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2022-present Bimi05
+Copyright (c) 2022-present Bimi
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -22,11 +22,16 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-from typing import List
 from .utils import camel_to_snake
+from typing import (
+    Any,
+    List,
+    TypeVar
+)
 
 class Gadget:
     """
+    # Do not manually initialise this.
     Represents a Brawl Stars brawler gadget.
 
     ### Attributes
@@ -35,26 +40,30 @@ class Gadget:
     id: `int`
         The gadget's ID.
     """
-    def __init__(self, gadget: dict) -> None:
-        self.gadget = gadget
+    def __init__(self, gadget: Any) -> None:
+        self.push_data(gadget)
 
     def __repr__(self) -> str:
-        return f"<Gadget name={self.gadget['name'].title()!r} id={self.gadget['id']}>"
+        return f"<{self.__class__.__name__} name={self.name!r} id={self.id}>"
+
+    def push_data(self, data: Any) -> None:
+        self._name: str = data["name"]
+        self._id: int = data["id"]
 
 
     @property
     def name(self) -> str:
         """`str`: The gadget's name."""
-        return self.gadget["name"]
+        return self._name.title()
 
     @property
     def id(self) -> int:
         """`int`: The gadget's ID."""
-        return self.gadget["id"]
-
+        return self._id
 
 class StarPower:
     """
+    # Do not manually initialise this.
     Represents a Brawl Stars brawler's star power.
 
     ### Attributes
@@ -63,26 +72,30 @@ class StarPower:
     id: `int`
         The star power's ID.
     """
-    def __init__(self, sp: dict) -> None:
-        self.star_power = sp
+    def __init__(self, sp: Any) -> None:
+        self.push_data(sp)
 
     def __repr__(self) -> str:
-        return f"<StarPower name={self.star_power['name'].title()!r} id={self.star_power['id']}>"
+        return f"<{self.__class__.__name__} name={self.name!r} id={self.id}>"
+
+    def push_data(self, data: Any) -> None:
+        self._name: str = data["name"]
+        self._id: int = data["id"]
 
 
     @property
     def name(self) -> str:
         """`str`: The star power's name."""
-        return self.star_power["name"]
+        return self._name.title()
 
     @property
     def id(self) -> int:
         """`int`: The star power's ID."""
-        return self.star_power["id"]
-
+        return self._id
 
 class Gear:
     """
+    # Do not manually initialise this.
     Represents a Brawl Stars brawler's gear.
 
     ### Attributes
@@ -93,29 +106,35 @@ class Gear:
     level: `int`
         The gear's level.
     """
-    def __init__(self, gear: dict) -> None:
-        self.gear = gear
+    def __init__(self, gear: Any) -> None:
+        self.push_data(gear)
 
     def __repr__(self) -> str:
-        return f"<Gear name={self.gear['name']!r} id={self.gear['id']} level={self.gear['level']}>"
+        return f"<{self.__class__.__name__} name={self.name!r} id={self.id} level={self.level}>"
+
+    def push_data(self, data: Any) -> None:
+        self._name: str = data["name"]
+        self._id: int = data["id"]
+        self._level: int = data["level"]
 
 
     @property
     def name(self) -> str:
         """`str`: The gear's name."""
-        return self.gear["name"]
+        return self._name.title()
 
     @property
     def id(self) -> int:
         """`int`: The gear's ID."""
-        return self.gear["id"]
+        return self._id
 
     @property
     def level(self) -> int:
         """`int`: The gear's level."""
-        return self.gear["level"]
+        return self._level
 
 
+B = TypeVar("B", bound="Brawler")
 class Brawler:
     """
     Represents a Brawl Stars brawler.
@@ -140,58 +159,69 @@ class Brawler:
     gears: List[`~.Gear`]
         A list of gears the brawler has crafted.
     """
-    def __init__(self, data: dict):
-        self.data = {camel_to_snake(key): value for key, value in data.items()}
+    def __init__(self: B, data: Any):
+        self.push_data({camel_to_snake(key): value for key, value in data.items()})
 
-    def __repr__(self):
-        return f"<Brawler name={self.data['name'].title()!r} id={self.data['id']} power={self.data['power']}>"
+    def __repr__(self: B):
+        return f"<{self.__class__.__name__} name={self.name!r} id={self.id} power={self.power} trophies={self.trophies}>"
 
-    def __str__(self) -> str:
-        return f"Rank {self.data['rank']} {self.data['name'].title()!r} (Power {self.data['power']:02d})"
+    def __str__(self: B) -> str:
+        return f"Rank {self.rank} {self.name!r} (Power {self.power:02d})"
+
+    def push_data(self: B, data: Any) -> None:
+        self._name: str = data["name"]
+        self._id: int = data["id"]
+        self._power: int = data.get("power")
+        self._rank: int = data.get("rank")
+        self._trophies: int = data.get("trophies")
+        self._highest_trophies: int = data.get("highest_trophies")
+        self._gadgets: Any = data["gadgets"]
+        self._star_powers: Any = data["star_powers"]
+        self._gears: Any = data["gears"]
 
 
     @property
-    def name(self) -> str:
+    def name(self: B) -> str:
         """`str`: The brawler's name."""
-        return self.data["name"].title()
+        return self._name.title()
 
     @property
-    def id(self) -> int:
+    def id(self: B) -> int:
         """`int`: The brawler's ID."""
-        return self.data["id"]
+        return self._id
 
     @property
-    def power(self) -> int:
+    def power(self: B) -> int:
         """`int`: The brawler's power level (1-11 exclusive)."""
-        return self.data["power"]
+        return self._power
 
     @property
-    def rank(self) -> int:
+    def rank(self: B) -> int:
         """`int`: The brawler's rank."""
-        return self.data["rank"]
+        return self._rank
 
     @property
-    def trophies(self) -> int:
+    def trophies(self: B) -> int:
         """`int`: The brawler's current trophies."""
-        return self.data["trophies"]
+        return self._trophies
 
     @property
-    def highest_trophies(self) -> int:
+    def highest_trophies(self: B) -> int:
         """`int`: The brawler's highest trophies."""
-        return self.data["highest_trophies"]
+        return self._highest_trophies
 
     @property
-    def gadgets(self) -> List[Gadget]:
+    def gadgets(self: B) -> List[Gadget]:
         """List[`~.Gadget`]: A list of gadgets the brawler has unlocked."""
-        return [Gadget(gadget) for gadget in self.data["gadgets"]]
+        return [Gadget(gadget) for gadget in self._gadgets]
 
     @property
-    def star_powers(self) -> List[StarPower]:
+    def star_powers(self: B) -> List[StarPower]:
         """List[`~.StarPower`]: A list of star powers the brawler has unlocked."""
-        return [StarPower(sp) for sp in self.data["star_powers"]]
+        return [StarPower(sp) for sp in self._star_powers]
 
     @property
-    def gears(self) -> List[Gear]:
+    def gears(self: B) -> List[Gear]:
         """List[`~.Gear`]: A list of gears the brawler has crafted."""
-        return [Gear(gear) for gear in self.data["gears"]]
+        return [Gear(gear) for gear in self._gears]
 

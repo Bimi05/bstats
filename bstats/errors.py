@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2022-present Bimi05
+Copyright (c) 2022-present Bimi
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -22,28 +22,27 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-class BSException(Exception):
+class APIException(Exception):
     """
-    Base class for all library exceptions.
-    - This exception class ideally catches all the errors thrown by the wrapper.
+    Base class for all library exceptions, includes all the errors thrown by this library.
     """
     pass
 
 
-class HTTPError(BSException):
+class HTTPError(APIException):
     """
     Base class for all HTTP-related errors.
     This includes (but is not limited to) status codes such as:
-    - ``403``: Invalid Authorization
-    - ``404``: Item not Found
-    - ``429``: User is Rate Limited
-    - ``500``: Unexpected Error occurrence
-    - ``503``: API is down
+    - `403`: Invalid Authorization
+    - `404`: Item not Found
+    - `429`: User is Rate Limited
+    - `500`: Unexpected Error occurrence
+    - `503`: API is down (most likely due to maintenance)
     """
     def __init__(self, response, code, message):
         super().__init__(f"{response.reason} (Status Code {code}): {message}")
 
-class ProcessingError(BSException):
+class ProcessingError(APIException):
     """
     Base class for all data processing errors.
     This gets raised in order to minimise and prevent `400` status codes.
@@ -77,10 +76,10 @@ class RateLimited(HTTPError):
     """The API rate-limit has been reached."""
     pass
 
-class APIServerError(HTTPError):
+class UnknownServerError(HTTPError):
     """An unknown server error occurred during the request."""
     pass
 
-class APIMaintenanceError(HTTPError):
+class MaintenanceError(HTTPError):
     """The API is temporarily unavailable due to in-game maintenance."""
     pass

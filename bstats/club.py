@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2022-present Bimi05
+Copyright (c) 2022-present Bimi
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -22,11 +22,16 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-from typing import List
 from .member import Member
 from .utils import camel_to_snake
-from .metadata.club import Club as ClubPayload
 
+from typing import (
+    List,
+    Any,
+    TypeVar
+)
+
+C = TypeVar("C", bound="Club")
 class Club:
     """
     Represents a Brawl Stars club.
@@ -42,78 +47,80 @@ class Club:
         The club's current total trophies.
     required_trophies: `int`
         The trophies that are required for a new member to join.
-    members: List[`~.ClubMember`]
-        A list consisting of `ClubMember` objects, representing the club's members.
+    members: List[`~.Member`]
+        A list consisting of `Member` objects, representing the club's members.
     type: `str`
         The club's type (i.e. "Open"/"Invite Only"/"Closed").
     badge_id: `int`
         The club's badge ID.
-    president: `~.ClubMember`
-        A `ClubMember` object representing the club's president.
+    president: `~.Member`
+        A `Member` object representing the club's president.
     """
-    def __init__(self, data: dict):
-        self.data = {camel_to_snake(key): value for key, value in data.items()}
-        self.patch_data(self.data)
+    def __init__(self: C, club: Any) -> None:
+        self.push_data({camel_to_snake(key): value for key, value in club.items()})
 
-    def __repr__(self):
+    def __repr__(self: C) -> str:
         return f"<{self.__class__.__name__} name={self.name!r} tag={self.tag!r} members={len(self.members)}>"
 
-    def __str__(self):
+    def __str__(self: C) -> str:
         return f"{self.name} ({self.tag})"
 
-    def patch_data(self, payload: ClubPayload):
-        self._name = payload["name"]
-        self._tag = payload["tag"]
-        self._description = payload["description"]
-        self._trophies = payload["trophies"]
-        self._required_trophies = payload["required_trophies"]
-        self._type = payload["type"]
-        self._badge_id = payload["badge_id"]
+    def push_data(self: C, data: Any) -> None:
+        self._name: str = data["name"]
+        self._tag: str = data["tag"]
+        self._description: str = data["description"]
+        self._trophies: int = data["trophies"]
+        self._required_trophies: str = data["required_trophies"]
+        self._type: str = data["type"]
+        self._badge_id: int = data["badge_id"]
+        self._members: Any = data["members"]
 
 
     @property
-    def name(self) -> str:
+    def name(self: C) -> str:
         """`str`: The club's name."""
         return self._name
 
     @property
-    def tag(self) -> str:
+    def tag(self: C) -> str:
         """`str`: The club's tag."""
         return self._tag
 
     @property
-    def description(self) -> str:
+    def description(self: C) -> str:
         """`str`: The club's description."""
         return self._description
 
     @property
-    def trophies(self) -> int:
+    def trophies(self: C) -> int:
         """`int`: The club's current total trophies."""
         return self._trophies
 
     @property
-    def required_trophies(self) -> int:
+    def required_trophies(self: C) -> int:
         """`int`: The trophies that are required for a new member to join."""
         return self._required_trophies
 
     @property
-    def members(self) -> List[Member]:
-        """List[`~.ClubMember`]: A list consisting of `ClubMember` objects, representing the club's members."""
-        return [Member(member) for member in self.data["members"]]
+    def members(self: C) -> List[Member]:
+        """List[`~.Member`]: A list consisting of `Member` objects, representing the club's members."""
+        return [Member(member) for member in self._members]
 
     @property
-    def type(self) -> str:
+    def type(self: C) -> str:
         """`str`: The club's type (i.e. "Open"/"Invite Only"/"Closed")."""
-        return self._type.capitalize() if self._type.lower() != "inviteonly" else "Invite Only"
+        if self._type.lower() != "inviteonly":
+            return self._type.capitalize()
+        return "Invite Only"
 
     @property
-    def badge_id(self) -> int:
+    def badge_id(self: C) -> int:
         """`int`: The club's badge ID."""
         return self._badge_id
 
     @property
-    def president(self):
-        """`~.ClubMember`: A `ClubMember` object representing the club's president."""
+    def president(self: C) -> Member:
+        """`~.Member`: A `Member` object representing the club's president."""
         for m in self.members:
             if m.role == "President":
                 return m
