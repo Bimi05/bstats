@@ -55,6 +55,8 @@ class Profile:
         The player's profile colour represented as a hex (#XXXXXX).
     color: `str`
         An alias to `.colour`.
+    icon_id: `int`
+        The player's icon ID.
     is_cc_qualified: `bool`
         Whether the player has qualified from a championship challenge (aka got 15 wins).
     level: `int`
@@ -94,6 +96,7 @@ class Profile:
         self._trophies: int = data["trophies"]
         self._highest_trophies: int = data["highest_trophies"]
         self._colour: str = data["name_color"]
+        self._icon_id: int = data["icon"]["id"]
         self._is_cc_qualified: bool = data["is_qualified_from_championship_challenge"]
         self._level: int = data["exp_level"]
         self._exp: int = data["exp_points"]
@@ -133,6 +136,11 @@ class Profile:
     def color(self: P) -> str:
         """`str`: An alias to `.colour`."""
         return self.colour
+    
+    @property
+    def icon_id(self: P) -> int:
+        """`int`: The player's icon ID."""
+        return self._icon_id
 
 
     def is_cc_qualified(self: P) -> bool:
@@ -177,7 +185,7 @@ class Profile:
     @property
     def club(self: P) -> str:
         """`str`: The club's tag. Useful to easily access the club's info via `.get_club()`."""
-        return self._club["data"]
+        return self._club["tag"]
 
     @property
     def brawlers(self: P) -> List[Brawler]:
