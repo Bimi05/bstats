@@ -10,7 +10,7 @@ Copyright (c) 2022-present Bimi
 __title__ = "bstats"
 __author__ = "Bimi"
 __license__ = "MIT"
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 from typing import NamedTuple
 
