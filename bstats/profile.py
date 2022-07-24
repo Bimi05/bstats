@@ -177,7 +177,7 @@ class Profile:
     @property
     def club(self: P) -> str:
         """`str`: The club's tag. Useful to easily access the club's info via `.get_club()`."""
-        return self._club["data"]
+        return self._club.pop("tag", None)
 
     @property
     def brawlers(self: P) -> List[Brawler]:

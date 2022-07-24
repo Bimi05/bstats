@@ -1,6 +1,9 @@
 # BStats changelog
 All notable contributions and changes to the project will be documented here.
 
+### 1.1.1 - 24th Jul 2022
+#### Updated
+- `Profile.club` now optionally returns `None` if the player is in no club.
 ### 1.1.0 - 10th Jul 2022
 #### Added
 - `ends_in` property to `EventSlot`.
